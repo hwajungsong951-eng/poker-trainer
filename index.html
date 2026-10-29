@@ -1,0 +1,3218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f14">
+<meta name="description" content="오프라인 포커 학습 트레이너 - 승률, 팟 오즈, 포지션, 승부 포인트(임플라이드 오즈·세미블러프·숏스택 올인)를 쉽게 배우기">
+<title>포커 학습 트레이너 · 오프라인</title>
+<style>
+  /* ============================================================
+     기본 레이아웃 / 색상
+     - 외부 폰트, CDN, 라이브러리 사용 없음
+     ============================================================ */
+  :root{
+    --bg:#0b0f14;
+    --panel:#141b24;
+    --line:#223043;
+    --text:#e8eef6;
+    --muted:#8fa1b6;
+    --gold:#e8b64c;
+    --gold-soft:#f3d99b;
+    --red:#e05555;
+    --green:#6fe3a1;
+    --felt-hi:#177a4c;
+    --felt-mid:#0e5736;
+    --felt-low:#083a25;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;min-height:100vh;
+    font-family:"Malgun Gothic","맑은 고딕",system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:radial-gradient(1200px 700px at 50% -15%,#1a2431 0%,#0b0f14 55%,#070a0e 100%);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font:inherit;cursor:pointer}
+  select{font:inherit}
+
+  /* ============================================================
+     상단 헤더
+     ============================================================ */
+  .top{
+    display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;
+    padding:16px 22px;border-bottom:1px solid #1d2735;
+    background:rgba(12,17,23,.72);backdrop-filter:blur(8px);
+    position:sticky;top:0;z-index:20;
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{
+    display:grid;place-items:center;width:44px;height:44px;border-radius:12px;
+    background:linear-gradient(160deg,#22303f,#131a23);border:1px solid #2c3b4d;
+    font-size:23px;color:var(--gold);
+  }
+  h1{margin:0;font-size:17px;letter-spacing:-.2px}
+  .brand p{margin:3px 0 0;font-size:11px;color:var(--muted)}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .controls label{display:flex;align-items:center;gap:6px;font-size:12px;color:#9fb0c3}
+  select{
+    background:#101823;color:var(--text);border:1px solid #2a3a4d;
+    border-radius:9px;padding:7px 10px;font-size:13px;
+  }
+  .primary{
+    background:linear-gradient(180deg,#f0c565,#d9a63c);border:0;color:#241a05;
+    font-weight:800;padding:10px 18px;border-radius:10px;
+    box-shadow:0 6px 18px rgba(217,166,60,.25);
+  }
+  .primary:hover{filter:brightness(1.06)}
+
+  /* 포지션 한글 안내 바 */
+  .legendBar{
+    display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;
+    padding:9px 22px;border-bottom:1px solid #1a2431;
+    background:rgba(10,15,21,.55);font-size:11.5px;color:var(--muted);
+  }
+  .legendBar b{color:#cfe0f0;font-weight:800}
+
+  /* ============================================================
+     본문 그리드 (테이블 + 우측 패널)
+     ============================================================ */
+  main{
+    display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;
+    padding:16px 22px 28px;max-width:1400px;margin:0 auto;align-items:start;
+  }
+
+  /* ============================================================
+     테이블 (타원형 펠트)
+     ============================================================ */
+  .tableArea{position:relative;width:100%;aspect-ratio:1.5;min-height:440px;max-height:660px}
+  .felt{
+    position:absolute;inset:7% 6%;border-radius:50%;
+    background:radial-gradient(ellipse at 50% 30%,var(--felt-hi) 0%,var(--felt-mid) 45%,var(--felt-low) 100%);
+    box-shadow:
+      inset 0 0 0 6px #123d2a,
+      inset 0 0 0 14px #2a1d10,
+      inset 0 0 0 16px #6b4a23,
+      inset 0 0 80px rgba(0,0,0,.55),
+      0 24px 60px rgba(0,0,0,.55);
+  }
+  .felt::after{
+    content:"";position:absolute;inset:0;border-radius:50%;
+    background:radial-gradient(ellipse at 50% 10%,rgba(255,255,255,.08),transparent 55%);
+    pointer-events:none;
+  }
+  .center{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:7px;padding:0 12%;
+  }
+  .street{
+    font-size:11px;letter-spacing:2.5px;color:#bfe3cf;
+    text-transform:uppercase;opacity:.85;
+  }
+  .blinds{font-size:10px;color:#8fb8a1;opacity:.85}
+  .turnLabel{font-size:12px;color:var(--green);min-height:16px;font-weight:700}
+  .board{display:flex;gap:8px;justify-content:center}
+  .board .card{width:48px;height:66px;border-radius:7px}
+  .board .card .r{font-size:19px}
+  .board .card .s{font-size:19px}
+  .pot{
+    font-size:15px;font-weight:800;color:var(--gold-soft);
+    background:rgba(0,0,0,.3);padding:4px 14px;border-radius:999px;
+    border:1px solid rgba(243,217,155,.25);
+  }
+  .result{
+    display:none;font-size:13px;font-weight:700;color:#fff;
+    background:rgba(0,0,0,.5);padding:5px 14px;border-radius:999px;
+    border:1px solid rgba(255,255,255,.18);text-align:center;
+  }
+
+  /* 핸드 종료 토스트 (3초) */
+  .handToast{
+    position:absolute;left:50%;top:8%;transform:translate(-50%,-6px);
+    min-width:250px;max-width:82%;padding:12px 18px;border-radius:14px;
+    background:rgba(8,12,18,.94);border:1px solid rgba(232,182,76,.55);
+    box-shadow:0 14px 34px rgba(0,0,0,.55);z-index:25;
+    opacity:0;pointer-events:none;transition:opacity .18s, transform .18s;
+    text-align:center;
+  }
+  .handToast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+  .toastTitle{font-size:16px;font-weight:900;color:var(--gold-soft)}
+  .toastLine{font-size:12px;color:#cfe0f0;margin-top:5px;line-height:1.5}
+  .toastBtn{
+    margin-top:9px;padding:8px 16px;border-radius:9px;border:0;
+    background:linear-gradient(180deg,#f0c565,#d9a63c);color:#241a05;
+    font-weight:800;font-size:12px;
+  }
+  .toastBtn:hover{filter:brightness(1.06)}
+
+  /* ============================================================
+     좌석 배치
+     - 좌석은 고정된 자리(0~n-1)에 놓인다.
+     - 탈락하면 그 자리가 "빈 자리"로 바뀐다.
+     ============================================================ */
+  .seats{position:absolute;inset:0;z-index:4;pointer-events:none}
+  .seat{
+    position:absolute;transform:translate(-50%,-50%);
+    display:flex;flex-direction:column;align-items:center;gap:5px;
+    width:118px;pointer-events:auto;
+  }
+  .seatCards{display:flex;gap:3px;min-height:38px}
+  .seat .card{width:27px;height:38px;border-radius:5px}
+  .seat .card .r{font-size:13px}
+  .seat .card .s{font-size:13px}
+  .seat.hero .card{width:34px;height:47px;border-radius:6px}
+  .seat.hero .card .r{font-size:16px}
+  .seat.hero .card .s{font-size:16px}
+  .plate{
+    display:flex;align-items:center;gap:8px;justify-content:space-between;
+    background:rgba(7,11,16,.88);border:1px solid #2b3b4e;
+    border-radius:10px;padding:5px 9px;min-width:104px;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .posWrap{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+  .pos{font-size:12px;font-weight:800;color:#cfe0f0}
+  .posKo{font-size:8px;color:#8fa1b6;white-space:nowrap;margin-top:1px}
+  .stack{font-size:12px;color:var(--muted)}
+  .seat.hero .plate{
+    border-color:var(--gold);
+    box-shadow:0 0 0 1px rgba(232,182,76,.5),0 0 18px rgba(232,182,76,.2);
+  }
+  .seat.hero .pos{color:var(--gold-soft)}
+  .seat.folded{opacity:.38;filter:grayscale(.4)}
+
+  /* 현재 차례 */
+  .seat.turn .plate{
+    border-color:var(--green);
+    box-shadow:0 0 0 2px rgba(111,227,161,.55),0 0 22px rgba(111,227,161,.3);
+  }
+  .seat.turn .pos{color:#9df5c4}
+  .turnDot{
+    position:absolute;top:-6px;left:-8px;width:14px;height:14px;border-radius:50%;
+    background:var(--green);box-shadow:0 0 10px var(--green);
+    animation:pulse 1.1s infinite;
+  }
+  @keyframes pulse{50%{opacity:.3}}
+
+  .dealer{
+    position:absolute;top:-7px;right:-9px;width:22px;height:22px;border-radius:50%;
+    background:#f4f6f8;color:#111;font-size:11px;font-weight:900;
+    display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.5);
+  }
+  .blind{
+    position:absolute;bottom:-11px;left:50%;transform:translateX(-50%);
+    font-size:9px;letter-spacing:.6px;color:var(--gold-soft);
+    background:rgba(0,0,0,.55);border:1px solid rgba(243,217,155,.3);
+    padding:1px 6px;border-radius:999px;
+  }
+  .betChip{
+    position:absolute;top:-15px;left:50%;transform:translateX(-50%);
+    font-size:10px;font-weight:800;color:#0b0f14;background:var(--gold);
+    border-radius:999px;padding:1px 7px;box-shadow:0 1px 4px rgba(0,0,0,.4);
+  }
+  .foldTag{
+    position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+    font-size:9px;color:#ffb4b4;background:rgba(80,20,20,.85);
+    padding:1px 6px;border-radius:999px;
+  }
+  .allInTag{
+    position:absolute;bottom:-11px;right:-8px;
+    font-size:9px;font-weight:800;color:#0b0f14;background:#ffb4b4;
+    padding:1px 6px;border-radius:999px;
+  }
+
+  /* 빈 자리 */
+  .seat.empty{opacity:.35;pointer-events:none}
+  .emptyPlate{
+    border:1px dashed #3a4a5e;border-radius:10px;padding:7px 14px;
+    font-size:11px;color:#6f8299;background:rgba(7,11,16,.4);
+  }
+
+  /* 별도 딜러 */
+  .dealerStation{
+    position:absolute;left:50%;top:90%;transform:translate(-50%,-50%);
+    display:flex;flex-direction:column;align-items:center;gap:3px;z-index:5;
+  }
+  .dealerDeck{position:relative;width:32px;height:26px}
+  .dealerDeck span{
+    position:absolute;width:18px;height:26px;border-radius:3px;
+    background:repeating-linear-gradient(45deg,#1b3563 0 4px,#274a86 4px 8px);
+    border:1px solid #0f2244;box-shadow:0 2px 6px rgba(0,0,0,.45);
+  }
+  .dealerDeck span:first-child{left:0;top:4px;transform:rotate(-8deg)}
+  .dealerDeck span:last-child{left:10px;top:0;transform:rotate(6deg)}
+  .dealerText{
+    font-size:9px;letter-spacing:1px;color:#cfe0f0;
+    background:rgba(0,0,0,.5);padding:1px 7px;border-radius:999px;
+    border:1px solid #2b3b4e;
+  }
+
+  /* 최종 우승 오버레이 */
+  .overlay{
+    position:absolute;inset:0;display:none;place-items:center;z-index:30;
+    background:rgba(4,7,10,.72);backdrop-filter:blur(3px);border-radius:18px;
+  }
+  .overlay.show{display:grid}
+  .overlayCard{
+    background:linear-gradient(180deg,#17202b,#0f151d);
+    border:1px solid #33445a;border-radius:18px;padding:26px 34px;
+    text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.6);max-width:80%;
+  }
+  .overlayTag{font-size:11px;letter-spacing:2px;color:var(--muted)}
+  .overlayTitle{
+    margin-top:8px;font-size:28px;font-weight:900;color:var(--gold-soft);
+    letter-spacing:-.3px;
+  }
+  .overlaySub{margin-top:8px;font-size:12.5px;color:#9fb0c3;line-height:1.6;white-space:pre-line}
+  .overlayCard .primary{margin-top:18px}
+
+  /* ============================================================
+     카드 (4색 덱)
+     ============================================================ */
+  .card{
+    display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#ffffff,#e9edf2);color:#10151b;
+    border:1px solid #c8d1dc;border-radius:6px;font-weight:800;line-height:1;
+    box-shadow:0 2px 6px rgba(0,0,0,.35);user-select:none;
+  }
+  .card .r{font-size:13px}
+  .card .s{font-size:13px;margin-top:1px}
+  .card.suit-1{color:#c92a2a}
+  .card.suit-2{color:#1e6fd9}
+  .card.suit-3{color:#1f8a4c}
+  .card.back{
+    background:repeating-linear-gradient(45deg,#1b3563 0 5px,#274a86 5px 10px);
+    border-color:#0f2244;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.15),0 2px 6px rgba(0,0,0,.35);
+  }
+  .card.slot{
+    background:rgba(255,255,255,.03);
+    border:1px dashed rgba(255,255,255,.18);
+    box-shadow:none;
+  }
+
+  /* ============================================================
+     우측 정보 패널
+     ============================================================ */
+  .panel{
+    background:linear-gradient(180deg,#141b24,#0f151d);
+    border:1px solid var(--line);border-radius:16px;padding:16px;
+    display:flex;flex-direction:column;gap:14px;
+    box-shadow:0 16px 40px rgba(0,0,0,.35);
+  }
+  .label{font-size:11px;letter-spacing:1.4px;color:#7f93a9;text-transform:uppercase}
+  .heroCards{display:flex;gap:8px;margin-top:6px;min-height:62px}
+  .heroCards .card{width:44px;height:62px;border-radius:7px}
+  .heroCards .card .r{font-size:18px}
+  .heroCards .card .s{font-size:18px}
+  .handName{font-size:16px;font-weight:800;margin-top:7px;color:var(--gold-soft);min-height:20px}
+  .equityRow{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12px;color:#9fb0c3}
+  .bar{flex:1;height:8px;border-radius:999px;background:#0a0f15;border:1px solid var(--line);overflow:hidden}
+  #equityBar{height:100%;width:0;background:linear-gradient(90deg,#2f9e68,#e8b64c);transition:width .25s}
+  #equityText{min-width:50px;text-align:right;font-weight:800;color:var(--text)}
+  .odds{font-size:12px;color:var(--muted);margin-top:8px;min-height:16px}
+
+  /* 추천 액션 */
+  .advice{
+    border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+    background:rgba(10,15,21,.5);
+  }
+  .adviceTop{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .adviceBadge{
+    font-size:13px;font-weight:900;padding:3px 11px;border-radius:999px;
+    border:1px solid #2b3b4e;color:#cfe0f0;background:#182231;
+  }
+  .adviceBadge.raise{background:rgba(232,182,76,.16);border-color:rgba(232,182,76,.5);color:var(--gold-soft)}
+  .adviceBadge.call{background:rgba(79,163,255,.14);border-color:rgba(79,163,255,.45);color:#bfe3ff}
+  .adviceBadge.fold{background:rgba(224,85,85,.12);border-color:rgba(224,85,85,.4);color:#ffb4b4}
+  .spotMain{font-size:12px;color:#e8eef6;font-weight:700;margin-top:7px;line-height:1.55}
+  .spotStrength{font-size:11px;color:#9fd8b8;margin-top:4px;line-height:1.5}
+  .adviceReason{font-size:12px;color:#cfe0f0;margin-top:7px;line-height:1.5}
+  .adviceTiming{
+    font-size:11px;color:#9fb0c3;margin-top:6px;line-height:1.5;
+    border-top:1px dashed #223043;padding-top:6px;
+  }
+  .adviceMeta{font-size:10.5px;color:#7f93a9;margin-top:6px;line-height:1.55}
+  .adviceCode{font-family:Consolas,"Courier New",monospace;color:#6f8299}
+
+  /* 쉬운 설명 박스 */
+  .easyBox{
+    border:1px solid rgba(232,182,76,.35);
+    background:linear-gradient(180deg,rgba(232,182,76,.11),rgba(232,182,76,.03));
+    border-radius:14px;padding:12px 14px;
+  }
+  .easyTitle{
+    font-size:11px;letter-spacing:1.4px;color:var(--gold);font-weight:800;
+  }
+  .easyText{
+    font-size:13.5px;line-height:1.7;color:#f7ecd8;margin-top:6px;
+  }
+  .dragHint{display:none}
+
+  /* 강도 해석 */
+  .strengthBox{
+    border:1px solid rgba(111,227,161,.25);
+    background:linear-gradient(180deg,rgba(111,227,161,.08),rgba(111,227,161,.02));
+    border-radius:14px;padding:12px 14px;
+  }
+  .strengthText{
+    font-size:12.5px;line-height:1.7;color:#d8f5e6;margin-top:6px;
+  }
+  .actions{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+    border-top:1px solid var(--line);padding-top:12px;
+  }
+  .act{
+    padding:11px 6px;border-radius:10px;border:1px solid #2b3b4e;
+    background:#182231;color:#dbe6f3;font-weight:800;font-size:13px;
+  }
+  .act:hover:not(:disabled){filter:brightness(1.12)}
+  .act:disabled{opacity:.35;cursor:not-allowed}
+  .act.fold{background:#2a161a;border-color:#4a2630;color:#ffb4b4}
+  .act.call{background:#122a3d;border-color:#1f4a6b;color:#bfe3ff}
+  .act.raise{background:linear-gradient(180deg,#f0c565,#d9a63c);border-color:#f0c565;color:#241a05}
+  .sliderRow{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin-top:2px}
+  input[type=range]{flex:1;accent-color:var(--gold);min-width:0}
+  #amountLabel{font-size:12px;color:var(--gold-soft);min-width:66px;text-align:right;font-weight:700}
+
+  /* 액션 피드백 / 핸드 요약 (텍스트 중심) */
+  .feedback{
+    border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+    background:rgba(10,15,21,.5);
+  }
+  .fbVerdict{font-size:13px;font-weight:800;margin-top:6px;color:#cfe0f0}
+  .fbVerdict.good{color:#9df5c4}
+  .fbVerdict.bad{color:#ffb4b4}
+  .fbDetail{font-size:11px;color:#9fb0c3;line-height:1.6;margin-top:6px;white-space:pre-line}
+  .handSummary{
+    border:1px solid rgba(232,182,76,.28);border-radius:12px;padding:10px 12px;
+    background:rgba(232,182,76,.05);
+  }
+  .summaryText{font-size:12.5px;color:#f3d99b;line-height:1.6;margin-top:6px}
+  .logBox{border-top:1px solid var(--line);padding-top:12px}
+  #log{
+    list-style:none;margin:8px 0 0;padding:0;max-height:150px;overflow:auto;
+    display:flex;flex-direction:column;gap:5px;
+  }
+  #log li{font-size:12px;color:#9fb0c3;line-height:1.4}
+  #log li:first-child{color:#dbe6f3}
+  .notes{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+  .notes summary{cursor:pointer;color:#9fb0c3}
+  .notes p{margin:8px 0 0;line-height:1.6}
+  .posLegend{
+    margin:9px 0 0;padding-left:16px;display:flex;flex-direction:column;gap:5px;
+    line-height:1.5;
+  }
+  .posLegend b{color:#cfe0f0}
+
+  /* 포지션 안내 표 */
+  #posTableWrap{margin-top:9px;overflow-x:auto}
+  .posTable{width:100%;border-collapse:collapse;font-size:11px}
+  .posTable th,.posTable td{
+    border-bottom:1px solid #223043;padding:5px 4px;text-align:left;
+  }
+  .posTable th{color:#7f93a9;font-weight:700;font-size:10px;letter-spacing:.4px;white-space:nowrap}
+  .posTable td.num{text-align:center;color:#cfe0f0;font-weight:700;white-space:nowrap}
+  .posTable .ko{color:#9fb0c3;font-size:10px;line-height:1.35}
+  .posTable .en{font-size:9px;color:#6f8299}
+  .posTable tr.hero td{background:rgba(232,182,76,.09);color:#f3d99b}
+  .posTable .chips{text-align:right;color:#cfe0f0;font-weight:700}
+  .btnChip{
+    display:inline-grid;place-items:center;width:14px;height:14px;border-radius:50%;
+    background:#f4f6f8;color:#111;font-size:9px;font-weight:900;vertical-align:middle;
+    margin-left:2px;
+  }
+  .why{margin:10px 0 0;line-height:1.65;font-size:11.5px;color:#9fb0c3}
+  .why b{color:#cfe0f0}
+  .whyTitle{color:#cfe0f0;font-weight:800;margin-top:12px;font-size:11.5px}
+
+  /* ============================================================
+     승부 포인트 (확률이 낮아도 걸 만한 상황)
+     ============================================================ */
+  .gambleBox{
+    border:1px solid rgba(79,163,255,.35);
+    background:linear-gradient(180deg,rgba(79,163,255,.10),rgba(79,163,255,.02));
+    border-radius:14px;padding:12px 14px;
+  }
+  .gambleList{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .gambleList li{
+    display:grid;grid-template-columns:26px 1fr;gap:8px;align-items:start;
+    padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.22);border:1px solid #223043;
+  }
+  .gambleList li.ok{border-color:rgba(111,227,161,.55);background:rgba(111,227,161,.08)}
+  .gambleList li.na{opacity:.55}
+  .gIcon{
+    width:24px;height:24px;border-radius:50%;display:grid;place-items:center;
+    font-size:13px;font-weight:900;background:#1b2635;color:#8fa1b6;
+  }
+  .gambleList li.ok .gIcon{background:var(--green);color:#06301b}
+  .gTitle{font-size:14px;font-weight:800;color:#e8eef6}
+  .gDetail{font-size:13px;color:#a9bacd;line-height:1.55;margin-top:2px}
+  .gambleTip{
+    font-size:12.5px;color:#cfe6ff;line-height:1.55;margin-top:8px;
+    padding-top:8px;border-top:1px dashed rgba(255,255,255,.12);
+  }
+  .gambleTip b{color:#fff}
+  .gambleDetails{margin-top:8px}
+  .gambleDetails summary{
+    cursor:pointer;color:#9fb0c3;font-size:11px;line-height:1.45;
+  }
+  .gambleDetails[open] summary{color:#cfe0f0}
+
+  /* ============================================================
+     가독성 개선 (전체 글자 크기 · 줄 간격 상향)
+     ============================================================ */
+  body{font-size:15px;line-height:1.5}
+  button,.act,.primary{touch-action:manipulation}
+  .label{font-size:12px;letter-spacing:.8px;color:#93a7bd;font-weight:700}
+  .handName{font-size:18px}
+  .equityRow{font-size:13.5px}
+  .odds{font-size:13.5px;color:#a9bacd}
+  .adviceBadge{font-size:15px;padding:4px 14px}
+  .adviceReason{font-size:15px;line-height:1.6}
+  .adviceTiming{font-size:13px;line-height:1.6}
+  .adviceMeta{font-size:12px}
+  .easyText{font-size:15px;line-height:1.75}
+  .strengthText{font-size:14px;line-height:1.7}
+  .fbVerdict{font-size:15px}
+  .fbDetail{font-size:13.5px;line-height:1.65}
+  .summaryText{font-size:14px}
+  #log li{font-size:13px}
+  .notes{font-size:14px}
+  .notes summary{font-size:14.5px;font-weight:700;padding:6px 0}
+  .notes p{line-height:1.8}
+  .posLegend{font-size:13.5px}
+  .posTable{font-size:13px}
+  .posTable th{font-size:12px}
+  .posTable .ko{font-size:12px}
+  .posTable .en{font-size:11px}
+  .why,.whyTitle{font-size:13.5px}
+  .toastTitle{font-size:18px}
+  .toastLine{font-size:14px}
+  .act{font-size:15px;min-height:48px}
+
+  /* ============================================================
+     반응형
+     ============================================================ */
+  @media (max-width:1000px){
+    main{grid-template-columns:1fr}
+    .tableArea{aspect-ratio:1.3;min-height:400px}
+    .seat{width:100px}
+  }
+
+  /* ---------- 모바일 (세로 화면) ---------- */
+  @media (max-width:760px){
+    body{font-size:16px}
+    .top{padding:10px 12px;gap:10px}
+    .brand p{display:none}
+    .logo{width:36px;height:36px;font-size:19px}
+    h1{font-size:17px}
+    .controls{width:100%;display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px}
+    .controls label{flex-direction:column;align-items:stretch;gap:3px;font-size:12px}
+    select{font-size:16px;padding:9px 8px;width:100%}  /* 16px: iOS 확대 방지 */
+    .primary{padding:12px 14px;font-size:15px;align-self:end}
+
+    .legendBar{
+      flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;
+      padding:8px 12px;font-size:13px;white-space:nowrap;scrollbar-width:none;
+    }
+    .legendBar::-webkit-scrollbar{display:none}
+
+    /* 하단 고정 액션바 공간 확보 */
+    main{padding:8px 8px calc(150px + env(safe-area-inset-bottom));gap:12px}
+
+    .tableArea{aspect-ratio:.92;min-height:0;max-height:none}
+    .felt{inset:9% 5%}
+    .center{padding:0 14%;gap:6px}
+    .street{font-size:13px;letter-spacing:1.5px}
+    .blinds{font-size:12px}
+    .turnLabel{font-size:14px}
+    .pot{font-size:17px;padding:5px 16px}
+    .result{font-size:13px;padding:6px 12px;line-height:1.45}
+    .board{gap:5px}
+    .board .card{width:44px;height:60px}
+    .board .card .r,.board .card .s{font-size:18px}
+
+    .seat{width:92px;gap:4px}
+    .seatCards{min-height:36px}
+    .seat .card{width:26px;height:36px}
+    .seat .card .r,.seat .card .s{font-size:13px}
+    .seat.hero .card{width:36px;height:50px}
+    .seat.hero .card .r,.seat.hero .card .s{font-size:17px}
+    .plate{min-width:84px;padding:5px 7px;gap:6px}
+    .pos{font-size:13px}
+    .posKo{font-size:10px}
+    .stack{font-size:13px;color:#cfe0f0;font-weight:700}
+    .betChip{font-size:12px;top:-18px;padding:2px 8px}
+    .blind,.foldTag,.allInTag{font-size:11px}
+    .dealerStation{top:93%}
+    .handToast{min-width:0;width:88%;max-width:none;top:4%}
+
+    .panel{padding:14px;gap:12px;border-radius:14px}
+    .heroCards .card{width:50px;height:70px}
+    .heroCards .card .r,.heroCards .card .s{font-size:20px}
+
+    /* 액션 버튼: 화면 하단 고정 (엄지로 누르기 쉽게) */
+    .actions{
+      position:fixed;left:0;right:0;bottom:0;z-index:50;margin:0;
+      padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+      background:rgba(10,14,20,.94);backdrop-filter:blur(10px);
+      border-top:1px solid #2a3a4d;box-shadow:0 -10px 30px rgba(0,0,0,.5);
+      gap:8px;
+    }
+    .sliderRow{order:-1;margin:0 0 2px}
+    #amountLabel{font-size:15px;min-width:84px}
+    input[type=range]{height:30px}
+    .act{min-height:54px;font-size:17px;border-radius:12px}
+
+    .overlayCard{padding:22px 20px;max-width:90%}
+    .overlayTitle{font-size:24px}
+    .overlaySub{font-size:14px}
+  }
+
+  /* ---------- 모바일 세로: 한 화면 + 드래그 설명 ---------- */
+  @media (max-width:760px){
+    body{padding-bottom:84px}
+    .top{padding:6px 8px;gap:6px}
+    .brand{gap:6px}
+    .logo{width:30px;height:30px;font-size:16px;border-radius:8px}
+    h1{font-size:13px}
+    .brand p{display:none}
+    .controls{
+      width:100%;display:flex;flex-wrap:nowrap;gap:5px;
+      align-items:center;justify-content:flex-end;
+    }
+    .controls label{flex-direction:row;align-items:center;gap:3px;font-size:9.5px;white-space:nowrap}
+    select{font-size:11px;padding:4px 6px;width:auto;border-radius:7px}
+    .primary{padding:6px 9px;font-size:11px;border-radius:7px;align-self:center}
+    .legendBar{display:none}
+
+    main{padding:5px 7px 0;gap:0}
+    .tableArea{height:33dvh;min-height:220px;max-height:310px;aspect-ratio:auto}
+    .felt{inset:2% 2%}
+    .center{gap:3px;padding:0 7%}
+    .street{font-size:9px;letter-spacing:1.2px}
+    .blinds{font-size:8px}
+    .turnLabel{font-size:10px;min-height:11px}
+    .pot{font-size:12px;padding:3px 10px}
+    .board{gap:4px}
+    .board .card{width:33px;height:45px;border-radius:5px}
+    .board .card .r,.board .card .s{font-size:13px}
+    .result{font-size:10px;padding:4px 10px;line-height:1.35}
+
+    .seat{width:76px;gap:2px}
+    .seatCards{min-height:24px;gap:2px}
+    .seat .card{width:17px;height:24px;border-radius:3px}
+    .seat .card .r,.seat .card .s{font-size:8px}
+    .seat.hero .card{width:22px;height:30px}
+    .seat.hero .card .r,.seat.hero .card .s{font-size:10px}
+    .plate{min-width:62px;padding:2px 4px;gap:3px;border-radius:7px}
+    .pos{font-size:8.5px}
+    .posKo{display:none}
+    .stack{font-size:8.5px}
+    .dealer{width:14px;height:14px;font-size:7px;top:-4px;right:-4px}
+    .blind{font-size:6.5px;padding:0 3px;bottom:-7px}
+    .betChip{font-size:7px;padding:0 4px;top:-9px}
+    .foldTag{font-size:6.5px;top:-8px}
+    .allInTag{font-size:6.5px;bottom:-7px}
+    .turnDot{width:9px;height:9px;top:-3px;left:-4px}
+    .dealerStation{top:87%}
+    .dealerDeck{transform:scale(.65)}
+    .dealerText{font-size:6.5px;padding:1px 4px}
+
+    .handToast{top:3%;width:90%;min-width:0;max-width:none;padding:8px 10px;border-radius:10px}
+    .toastTitle{font-size:13px}
+    .toastLine{font-size:10px;margin-top:3px}
+    .toastBtn{margin-top:7px;padding:6px 13px;font-size:11px}
+
+    /* 설명 영역: 고정 높이 안에서 드래그(스크롤) */
+    .panel{
+      padding:6px 2px 0;gap:6px;border:0;background:transparent;box-shadow:none;
+      max-height:calc(100dvh - 33dvh - 170px);
+      overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+      touch-action:pan-y;scrollbar-width:thin;
+    }
+    /* 모바일 순서: 내 정보 → 쉬운 설명 → 승부 포인트(드래그) */
+    .panel > div:first-child{order:0}
+    .easyBox{order:1}
+    .dragHint{order:2}
+    .advice{order:3}
+    .feedback{order:4}
+    .handSummary{order:5}
+    .panel .label{font-size:9px}
+    .heroCards{min-height:0;gap:4px;margin-top:2px}
+    .heroCards .card{width:26px;height:36px;border-radius:4px}
+    .heroCards .card .r,.heroCards .card .s{font-size:10px}
+    .handName{font-size:12px;margin-top:3px;min-height:0}
+    .equityRow{margin-top:4px;gap:5px;font-size:9.5px}
+    .bar{height:5px}
+    #equityText{min-width:34px;font-size:9.5px}
+    .odds{font-size:9.5px;margin-top:3px;min-height:0}
+
+    .advice{padding:7px 9px;border-radius:9px}
+    .adviceTop .label{font-size:8.5px}
+    .adviceBadge{font-size:10px;padding:2px 7px}
+    .spotMain{font-size:9.5px;margin-top:4px;line-height:1.45}
+    .spotStrength{font-size:9px;margin-top:2px;line-height:1.4}
+    .adviceReason{font-size:9.5px;margin-top:4px;line-height:1.4}
+    .adviceTiming{font-size:8.5px;margin-top:3px;padding-top:3px;line-height:1.4}
+    .adviceMeta{font-size:8px;margin-top:3px;line-height:1.4}
+
+    .easyBox{padding:7px 9px;border-radius:9px}
+    .easyTitle{font-size:8.5px}
+    .easyText{font-size:10.5px;line-height:1.5;margin-top:3px}
+    .dragHint{display:block;font-size:9px;color:#7f93a9;text-align:center;padding:1px 0}
+
+    .feedback{padding:7px 9px}
+    .fbVerdict{font-size:10.5px;margin-top:2px}
+    .fbDetail{font-size:9px;margin-top:2px}
+    .handSummary{padding:7px 9px}
+    .summaryText{font-size:10px;margin-top:2px}
+
+    .logBox,.notes{display:none}
+
+    .actions{
+      position:fixed;left:0;right:0;bottom:0;z-index:60;margin:0;
+      display:grid;grid-template-columns:repeat(3,1fr);gap:5px;
+      padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+      background:rgba(9,13,19,.97);border-top:1px solid #223043;
+      border-radius:0;box-shadow:0 -8px 24px rgba(0,0,0,.5);
+    }
+    .act{padding:8px 4px;font-size:10.5px;border-radius:7px;min-height:40px}
+    .sliderRow{order:0;margin:0;gap:6px}
+    #amountLabel{font-size:9.5px;min-width:48px}
+    input[type=range]{height:22px}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <span class="logo">♠</span>
+    <div>
+      <h1>포커 학습 트레이너</h1>
+      <p>오프라인 · 단일 HTML · 외부 라이브러리 없음</p>
+    </div>
+  </div>
+  <div class="controls">
+    <label>인원
+      <select id="playerCount">
+        <option value="2">2인</option>
+        <option value="3">3인</option>
+        <option value="4">4인</option>
+        <option value="5" selected>5인</option>
+      </select>
+    </label>
+    <label>내 시작 포지션
+      <select id="heroPos"></select>
+    </label>
+    <button id="btnNew" class="primary">새 게임</button>
+  </div>
+</header>
+
+<!-- 포지션 한글 뜻 요약 -->
+<div class="legendBar">
+  <span><b>BTN</b> 버튼(딜러)</span>
+  <span><b>SB</b> 스몰블라인드</span>
+  <span><b>BB</b> 빅블라인드</span>
+  <span><b>UTG</b> 언더더건(첫 행동)</span>
+  <span><b>CO</b> 컷오프</span>
+  <span>버튼(D)은 매 핸드 시계방향 이동</span>
+</div>
+
+<main>
+  <!-- 테이블 영역 -->
+  <section class="tableArea" id="tableArea">
+    <div class="felt">
+      <div class="center">
+        <div class="street" id="streetLabel">프리플롭</div>
+        <div class="blinds" id="blindsLabel">블라인드 1 / 2</div>
+        <div class="turnLabel" id="turnLabel"></div>
+        <div class="pot" id="potLabel">팟 3</div>
+        <div class="board" id="board"></div>
+        <div class="result" id="result"></div>
+      </div>
+    </div>
+
+    <!-- 플레이어 좌석 -->
+    <div class="seats" id="seats"></div>
+
+    <!-- 별도 딜러 (플레이어 아님) -->
+    <div class="dealerStation">
+      <div class="dealerDeck"><span></span><span></span></div>
+      <div class="dealerText">딜러</div>
+    </div>
+
+    <!-- 핸드 종료 토스트 (3초) -->
+    <div class="handToast" id="handToast">
+      <div class="toastTitle" id="toastTitle"></div>
+      <div class="toastLine" id="toastReason"></div>
+      <div class="toastLine" id="toastAmount"></div>
+      <button class="toastBtn" id="toastNext">다음 핸드</button>
+    </div>
+
+    <!-- 최종 우승 오버레이 -->
+    <div class="overlay" id="overlay">
+      <div class="overlayCard">
+        <div class="overlayTag">GAME OVER</div>
+        <div class="overlayTitle" id="overlayTitle">-</div>
+        <div class="overlaySub" id="overlaySub">-</div>
+        <button class="primary" id="btnRestart">새 게임</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 정보 / 액션 패널 -->
+  <aside class="panel">
+    <div>
+      <div class="label">내 핸드 · <span id="heroPosLabel">-</span></div>
+      <div class="heroCards" id="heroCards"></div>
+      <div class="handName" id="handName">-</div>
+      <div class="equityRow">
+        <span id="equityLabel">승률</span>
+        <div class="bar"><div id="equityBar"></div></div>
+        <span id="equityText">-</span>
+      </div>
+      <div class="odds" id="oddsText"></div>
+    </div>
+
+    <!-- 승부 포인트 (추천 + 강도 + 4가지 조건 + 결론) -->
+    <div class="advice">
+      <div class="adviceTop">
+        <span class="label">승부 포인트</span>
+        <span class="adviceBadge" id="adviceAction">-</span>
+      </div>
+      <div class="spotMain" id="spotMain">-</div>
+      <div class="spotStrength" id="spotStrength">-</div>
+      <div class="adviceReason" id="adviceReason">-</div>
+      <div class="adviceTiming" id="adviceTiming"></div>
+      <div class="adviceMeta" id="adviceMeta"></div>
+
+      <div class="gambleTip" id="gambleTip"></div>
+
+      <details class="gambleDetails">
+        <summary>4가지 승부 조건 자세히 (임플라이드 오즈 · 세미 블러프 · 숏스택 · 셋 마이닝)</summary>
+        <ul class="gambleList" id="gambleList"></ul>
+      </details>
+    </div>
+
+    <!-- 유치원생도 이해하는 쉬운 설명 -->
+    <div class="easyBox">
+      <div class="easyTitle">쉬운 설명</div>
+      <div class="easyText" id="easyText">-</div>
+    </div>
+
+    <div class="dragHint">설명은 위아래로 드래그해서 볼 수 있어요</div>
+
+    <div class="actions">
+      <button id="btnFold" class="act fold">폴드</button>
+      <button id="btnCall" class="act call">콜</button>
+      <button id="btnRaise" class="act raise">레이즈</button>
+      <div class="sliderRow">
+        <input type="range" id="amount" min="4" max="100" step="1" value="6">
+        <output id="amountLabel">레이즈 6</output>
+      </div>
+    </div>
+
+    <!-- 액션 선택 후 추천과 비교 -->
+    <div class="feedback">
+      <div class="label">액션 피드백</div>
+      <div class="fbVerdict" id="fbVerdict">아직 액션이 없어요</div>
+      <div class="fbDetail" id="fbDetail">카드와 포지션을 확인하고 폴드/콜/레이즈를 선택해 보세요.</div>
+    </div>
+
+    <!-- 핸드가 끝나면 한 줄 요약 -->
+    <div class="handSummary">
+      <div class="label">최근 핸드 요약</div>
+      <div class="summaryText" id="handSummaryText">아직 끝난 핸드가 없어요.</div>
+    </div>
+
+    <div class="logBox">
+      <div class="label">진행 로그</div>
+      <ul id="log"></ul>
+    </div>
+
+    <details class="notes">
+      <summary>게임 진행 안내</summary>
+      <p>
+        · <b>2~5인</b> 게임입니다. <b>딜러(사람)는 별도</b>이고, 카드만 돌립니다.<br>
+        · <b>버튼(D)</b>은 플레이어 자리에 있으며, <b>매 핸드 시계방향으로 한 자리씩 이동</b>합니다.<br>
+        · 이긴 사람이 버튼을 가져가는 것이 아닙니다. 승패와 관계없이 버튼이 이동합니다.<br>
+        · 버튼 왼쪽이 <b>SB</b>, 그다음이 <b>BB</b>이고, 버튼은 마지막에 행동합니다.<br>
+        · <b>2인</b>일 때는 버튼이 SB를 겸합니다.<br>
+        · <b>추천 액션</b>은 몬테카를로 승률 + 포지션 가중치 + 팟 오즈 + 타이밍 기준으로 계산합니다.<br>
+        · 칩이 0이 되면 <b>좌석이 비고</b>, 마지막 1명이 남으면 게임이 끝납니다.<br>
+        · 블라인드는 10핸드마다 2배로 올라갑니다.<br>
+        · 사이드 팟은 계산하지 않습니다.
+      </p>
+    </details>
+
+    <details class="notes" open>
+      <summary>확률이 낮아도 승부를 거는 4가지 경우</summary>
+      <p>
+        승률이 필요 승률(팟 오즈)보다 낮다고 <b>무조건 폴드는 아닙니다.</b>
+        지금 당장의 승률 말고도 "앞으로 더 딸 수 있는 돈"이나 "상대가 포기할 확률"이 있기 때문입니다.<br><br>
+        ① <b>임플라이드 오즈</b> (플롭·턴, 드로우 8아웃 이상)<br>
+        지금은 팟 오즈가 모자라도, 드로우가 완성되면 상대 스택에서 <b>추가로 받을 칩</b>이 많다면 콜합니다.
+        상대 남은 칩이 많을수록 유리. 리버에는 해당 없음.<br><br>
+        ② <b>세미 블러프</b> (드로우 + 늦은 포지션 + 상대 1~2명)<br>
+        콜 대신 <b>먼저 베팅/레이즈</b>합니다. 상대가 포기하면 바로 팟을 먹고, 콜해도 드로우가 완성되면 이깁니다.
+        승리 경로가 2개라 승률이 낮아도 이득이 될 수 있습니다.<br><br>
+        ③ <b>숏스택 올인</b> (내 칩이 10BB 이하, 프리플롭)<br>
+        블라인드에 칩이 계속 깎이기 때문에, 평균보다 나은 핸드면 <b>올인으로 승부</b>합니다.
+        기다릴수록 더 불리해집니다.<br><br>
+        ④ <b>셋 마이닝 / 스페큘러티브</b> (프리플롭, 작은 페어·수딧 커넥터)<br>
+        콜 금액이 서로의 스택의 <b>1/15 이하</b>로 싸다면, 트리플·스트레이트·플러시를 노리고 콜합니다.
+        맞으면 크게 이기고, 안 맞으면 플롭에서 바로 포기합니다.<br><br>
+        ✗ <b>반대로 하지 말아야 할 때</b>: 리버에서 드로우가 실패했을 때, 상대가 3명 이상인데 블러프할 때,
+        상대 칩이 적어 추가로 받을 게 없을 때.
+      </p>
+    </details>
+
+    <details class="notes">
+      <summary>타이밍 해석 (프리플롭~리버)</summary>
+      <p>
+        · <b>프리플롭</b>: 보드가 없습니다. 핸드 강도·포지션·블라인드 팟 오즈로 판단합니다.<br>
+        · <b>플롭</b>: 3장 공개. 메이드와 드로우를 구분하고, 남은 2장으로 완성될 확률을 봅니다.<br>
+        · <b>턴</b>: 1장 남음. 드로우 완성 확률이 낮아져 콜 기준이 더 엄격해집니다.<br>
+        · <b>리버</b>: 추가 카드가 없습니다. 현재 승률이 최종 승률이라 블러프/밸류 판단이 중요합니다.
+      </p>
+    </details>
+
+    <details class="notes" open>
+      <summary>용어 설명 (블라인드 팟 · 오즈)</summary>
+      <p>
+        · <b>블라인드 팟</b>: SB·BB가 강제로 낸 칩으로 만들어진 <b>시작 팟</b>입니다.
+        아무도 베팅하지 않아도 이미 팟에 들어가 있습니다. (예: 1/2 블라인드 → 3칩)<br>
+        · <b>팟(Pot)</b>: 이번 핸드에서 모든 플레이어가 넣은 칩의 합계입니다.<br>
+        · <b>콜 금액</b>: 상대 베팅에 맞추기 위해 내가 더 내야 하는 칩입니다.
+        (콜 = 현재 최고 베팅 − 내가 이미 낸 금액)<br>
+        · <b>팟 오즈(Pot Odds)</b>: <b>콜 금액 ÷ (팟 + 콜 금액)</b>.
+        콜해서 손익분기점이 되는 승률입니다.
+        예: 팟 3, 콜 2 → 2 ÷ (3+2) = <b>40%</b>.<br>
+        · <b>필요 승률</b>: 팟 오즈와 같은 뜻입니다. 콜이 이득이 되려면
+        최소 이만큼은 이겨야 한다는 승률입니다.<br>
+        · <b>승률(Equity)</b>: 지금 내 핸드가 이길 확률입니다(상대 랜덤 핸드 기준).<br>
+        · <b>보정 승률</b>: 승률에 포지션 가중치를 더한 값입니다.
+        늦은 포지션이면 +, 이른 포지션이면 −.<br>
+        · <b>아웃츠(Outs)</b>: 내 핸드를 더 강하게 만들어 줄 남은 카드의 수입니다.
+        (예: 플러시 드로우 = 9아웃)
+      </p>
+    </details>
+
+    <details class="notes" open>
+      <summary>포지션 뜻 · 행동 순서</summary>
+
+      <div id="posTableWrap"></div>
+
+      <ul class="posLegend">
+        <li><b>BTN (Button)</b> 버튼 — 딜러 버튼 자리. 프리플롭·플롭 모두 마지막 행동. 가장 유리.</li>
+        <li><b>SB (Small Blind)</b> 스몰 블라인드 — 버튼 왼쪽 첫 자리. 0.5BB 강제.</li>
+        <li><b>BB (Big Blind)</b> 빅 블라인드 — SB 다음. 1BB 강제. 프리플롭 마지막 행동.</li>
+        <li><b>UTG (Under The Gun)</b> 언더 더 건 — BB 다음. 프리플롭 첫 행동이라 가장 위험.</li>
+        <li><b>CO (Cutoff)</b> 컷오프 — 버튼 바로 앞자리. 버튼 다음으로 유리.</li>
+        <li><b>딜러</b> — 카드를 돌리는 사람. 버튼(D)과는 별개입니다.</li>
+      </ul>
+
+      <div class="whyTitle">왜 이 순서가 될까?</div>
+      <p class="why">
+        · <b>버튼(D)</b>은 매 핸드 <b>시계방향으로 한 자리씩</b> 이동합니다.
+        이긴 사람이 버튼을 가져가는 규칙이 아닙니다.<br>
+        · 버튼 왼쪽이 <b>SB</b>, 그다음이 <b>BB</b>입니다.<br>
+        · SB·BB는 <b>강제로 내는 블라인드</b>라서, 프리플롭에서는 <b>맨 마지막</b>에 행동합니다.<br>
+        · 그래서 프리플롭 첫 행동은 BB 바로 다음 자리인 <b>UTG</b>이고,
+        <b>버튼(BTN)</b>이 마지막입니다.<br>
+        · 플롭 이후에는 <b>SB</b>부터 시작해 <b>버튼</b>이 마지막입니다.<br>
+        · 2인일 때는 <b>버튼이 SB를 겸합니다.</b>
+        프리플롭은 SB/버튼이 먼저, 플롭 이후는 BB가 먼저 행동합니다.<br>
+        · 플레이어가 탈락하면 버튼은 <b>다음 살아 있는 자리</b>로 이동하고,
+        남은 사람 기준으로 포지션이 다시 배정됩니다.<br>
+        · 뒤에 행동할수록 상대의 선택을 보고 결정할 수 있어 유리합니다. → <b>BTN이 가장 유리</b>.
+      </p>
+      <p class="why">※ 표는 현재 살아 있는 플레이어 기준으로 자동 갱신됩니다.</p>
+    </details>
+  </aside>
+</main>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ============================================================
+     1. 상수
+     ============================================================ */
+  const SUITS = ['♠','♥','♦','♣'];
+  const RANK_LABEL = {
+    2:'2', 3:'3', 4:'4', 5:'5', 6:'6', 7:'7', 8:'8', 9:'9',
+    10:'10', 11:'J', 12:'Q', 13:'K', 14:'A'
+  };
+  // 핸드 표기용 (10은 T)
+  const RANK_NOTATION = Object.assign({}, RANK_LABEL, { 10: 'T' });
+
+  // 2~5인 포지션 (버튼 기준, 인덱스 0 = 버튼)
+  // 2인은 버튼이 SB를 겸한다.
+  const POSITIONS = {
+    2: ['SB','BB'],
+    3: ['BTN','SB','BB'],
+    4: ['BTN','SB','BB','UTG'],
+    5: ['BTN','SB','BB','UTG','CO']
+  };
+
+  const STREET_NAMES = {
+    preflop:'프리플롭', flop:'플롭', turn:'턴', river:'리버', showdown:'쇼다운'
+  };
+
+  const POS_KO = {
+    'BTN':'버튼(딜러)',
+    'SB':'스몰블라인드',
+    'BB':'빅블라인드',
+    'UTG':'언더더건',
+    'HJ':'하이잭',
+    'CO':'컷오프'
+  };
+  const POS_EN = {
+    'BTN':'Button',
+    'SB':'Small Blind',
+    'BB':'Big Blind',
+    'UTG':'Under The Gun',
+    'HJ':'Hijack',
+    'CO':'Cutoff'
+  };
+
+  const START_STACK = 100;   // 시작 칩
+  const SB_AMOUNT = 1;
+  const BB_AMOUNT = 2;
+  const AI_DELAY = 320;      // AI 행동 간격
+  const AI_DELAY_FAST = 150; // 히어로 탈락 후 빠르게
+
+  /* ============================================================
+     2. 상태
+     ============================================================ */
+  const S = {
+    n: 5,
+    heroStartPos: 'CO',
+    heroSeat: 4,
+    buttonSeat: 0,
+    seats: [],
+    activeOrder: [],
+    deck: [],
+    board: [],
+    pot: 0,
+    street: 'preflop',
+    currentBet: 0,
+    minRaise: BB_AMOUNT,
+    turn: -1,
+    active: false,
+    showdown: false,
+    processing: false,
+    gameOver: false,
+    showOverlay: false,
+    winnerSeat: -1,
+    handNo: 0,
+    result: null,
+    log: [],
+    token: 0,
+    heroDecisions: [],
+    lastFeedback: null,
+    lastHandSummary: null,
+    lastResult: null,
+    _eqKey: null,
+    _eqVal: 0.5
+  };
+
+  /* ============================================================
+     3. 유틸 (셔플 / 카드)
+     ============================================================ */
+  function randInt(n){
+    if (window.crypto && window.crypto.getRandomValues){
+      const buf = new Uint32Array(1);
+      window.crypto.getRandomValues(buf);
+      return buf[0] % n;
+    }
+    return Math.floor(Math.random() * n);
+  }
+
+  function makeDeck(){
+    const deck = [];
+    for (let s = 0; s < 4; s++){
+      for (let r = 2; r <= 14; r++) deck.push({ r: r, s: s });
+    }
+    return deck;
+  }
+
+  function shuffle(arr){
+    for (let i = arr.length - 1; i > 0; i--){
+      const j = randInt(i + 1);
+      const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  function cardEl(card, extraClass){
+    const el = document.createElement('span');
+    // 4색 덱: s=0 스페이드(검정), 1 하트(빨강), 2 다이아(파랑), 3 클럽(초록)
+    el.className = 'card' + (extraClass ? ' ' + extraClass : '') +
+                   (card.s ? ' suit-' + card.s : '');
+    const r = document.createElement('span');
+    r.className = 'r'; r.textContent = RANK_LABEL[card.r];
+    const s = document.createElement('span');
+    s.className = 's'; s.textContent = SUITS[card.s];
+    el.appendChild(r); el.appendChild(s);
+    return el;
+  }
+
+  function backEl(extraClass){
+    const el = document.createElement('span');
+    el.className = 'card back' + (extraClass ? ' ' + extraClass : '');
+    return el;
+  }
+
+  /* ============================================================
+     4. 포커 엔진 (순수 JS)
+     - rank5 / rank7 / compareRanks / describeRank
+     - calcPositions (2~5인, 딜러 별도)
+     - classifyPreflop
+     - runEngineTests (콘솔 출력)
+     ============================================================ */
+  const CATEGORY_NAMES_KO = [
+    '하이카드','원 페어','투 페어','트리플','스트레이트',
+    '플러시','풀하우스','포카드','스트레이트 플러시'
+  ];
+  const CATEGORY_NAMES_EN = [
+    'High Card','One Pair','Two Pair','Three of a Kind','Straight',
+    'Flush','Full House','Four of a Kind','Straight Flush'
+  ];
+
+  function makeRank(category, tiebreak, royal){
+    return {
+      category: category,
+      name: royal ? '로열 플러시' : CATEGORY_NAMES_KO[category],
+      nameEn: royal ? 'Royal Flush' : CATEGORY_NAMES_EN[category],
+      tiebreak: tiebreak.slice(),
+      royal: !!royal
+    };
+  }
+
+  function rank5(cards){
+    if (!Array.isArray(cards) || cards.length !== 5){
+      throw new Error('rank5: 5장의 카드가 필요합니다.');
+    }
+
+    const ranks = cards.map(function(c){ return c.r; }).sort(function(a,b){ return b - a; });
+    const suits = cards.map(function(c){ return c.s; });
+    const isFlush = suits.every(function(s){ return s === suits[0]; });
+
+    const uniq = [];
+    for (let i = 0; i < ranks.length; i++){
+      if (i === 0 || ranks[i] !== ranks[i-1]) uniq.push(ranks[i]);
+    }
+
+    let straightHigh = 0;
+    if (uniq.length === 5){
+      if (uniq[0] - uniq[4] === 4) straightHigh = uniq[0];
+      else if (uniq[0] === 14 && uniq[1] === 5 && uniq[4] === 2) straightHigh = 5; // 휠
+    }
+
+    if (isFlush && straightHigh){
+      return makeRank(8, [straightHigh], straightHigh === 14);
+    }
+
+    const counts = {};
+    ranks.forEach(function(r){ counts[r] = (counts[r] || 0) + 1; });
+    const groups = Object.keys(counts).map(function(k){
+      return { rank: +k, count: counts[k] };
+    }).sort(function(a,b){ return b.count - a.count || b.rank - a.rank; });
+
+    if (groups[0].count === 4) return makeRank(7, [groups[0].rank, groups[1].rank]);
+    if (groups[0].count === 3 && groups[1].count === 2) return makeRank(6, [groups[0].rank, groups[1].rank]);
+    if (isFlush) return makeRank(5, ranks);
+    if (straightHigh) return makeRank(4, [straightHigh]);
+    if (groups[0].count === 3) return makeRank(3, [groups[0].rank, groups[1].rank, groups[2].rank]);
+    if (groups[0].count === 2 && groups[1].count === 2) return makeRank(2, [groups[0].rank, groups[1].rank, groups[2].rank]);
+    if (groups[0].count === 2) return makeRank(1, [groups[0].rank, groups[1].rank, groups[2].rank, groups[3].rank]);
+    return makeRank(0, ranks);
+  }
+
+  // 5~7장 중 최고의 5장 조합을 고른다.
+  // (플롭/턴처럼 아직 7장이 아닐 때도 사용할 수 있게 5~7장 지원)
+  function rank7(cards){
+    if (!Array.isArray(cards) || cards.length < 5 || cards.length > 7){
+      throw new Error('rank7: 5~7장의 카드가 필요합니다.');
+    }
+    if (cards.length === 5) return rank5(cards);
+
+    const n = cards.length;
+    let best = null;
+    for (let a = 0; a < n - 4; a++)
+      for (let b = a+1; b < n - 3; b++)
+        for (let c = b+1; c < n - 2; c++)
+          for (let d = c+1; d < n - 1; d++)
+            for (let e = d+1; e < n; e++){
+              const r = rank5([cards[a], cards[b], cards[c], cards[d], cards[e]]);
+              if (!best || compareRanks(r, best) > 0) best = r;
+            }
+    return best;
+  }
+
+  function compareRanks(a, b){
+    if (a.category !== b.category) return a.category > b.category ? 1 : -1;
+    const len = Math.max(a.tiebreak.length, b.tiebreak.length);
+    for (let i = 0; i < len; i++){
+      const x = a.tiebreak[i] || 0;
+      const y = b.tiebreak[i] || 0;
+      if (x !== y) return x > y ? 1 : -1;
+    }
+    return 0;
+  }
+
+  function describeRank(rank){
+    if (!rank) return '-';
+    const t = rank.tiebreak;
+    switch (rank.category){
+      case 8: return rank.royal ? '로열 플러시' : '스트레이트 플러시 (' + RANK_LABEL[t[0]] + ' 하이)';
+      case 7: return '포카드 (' + RANK_LABEL[t[0]] + ')';
+      case 6: return '풀하우스 (' + RANK_LABEL[t[0]] + ' / ' + RANK_LABEL[t[1]] + ')';
+      case 5: return '플러시 (' + RANK_LABEL[t[0]] + ' 하이)';
+      case 4: return (t[0] === 5 ? '휠 스트레이트' : '스트레이트') + ' (' + RANK_LABEL[t[0]] + ' 하이)';
+      case 3: return '트리플 (' + RANK_LABEL[t[0]] + ')';
+      case 2: return '투 페어 (' + RANK_LABEL[t[0]] + ', ' + RANK_LABEL[t[1]] + ')';
+      case 1: return '원 페어 (' + RANK_LABEL[t[0]] + ')';
+      default: return '하이카드 (' + RANK_LABEL[t[0]] + ')';
+    }
+  }
+
+  // 2~5인 포지션 (버튼 기준). 인덱스 0 = 버튼
+  function calcPositions(playerCount){
+    const n = playerCount;
+    const names = POSITIONS[n];
+    if (!names) throw new Error('calcPositions: 2~5인만 지원합니다.');
+
+    let pre, post;
+
+    if (n === 2){
+      // 헤즈업: 버튼(SB)이 프리플롭 먼저, BB가 플롭 이후 먼저
+      pre = [0, 1];
+      post = [1, 0];
+    } else if (n === 3){
+      // 3인: 버튼이 UTG 역할로 프리플롭 먼저
+      pre = [0, 1, 2];
+      post = [1, 2, 0];
+    } else {
+      // 4인 이상: UTG부터 → BTN → SB → BB
+      pre = [];
+      for (let i = 3; i < n; i++) pre.push(i);
+      pre.push(0, 1, 2);
+
+      post = [];
+      for (let i = 1; i < n; i++) post.push(i);
+      post.push(0);
+    }
+
+    return names.map(function(pos, i){
+      return {
+        index: i,
+        position: pos,
+        isButton: i === 0,
+        isSB: pos === 'SB',
+        isBB: pos === 'BB',
+        preflopOrder: pre.indexOf(i) + 1,
+        postflopOrder: post.indexOf(i) + 1
+      };
+    });
+  }
+
+  // 프리플롭 핸드 강도 간단 분류
+  function classifyPreflop(cards){
+    if (!Array.isArray(cards) || cards.length !== 2){
+      throw new Error('classifyPreflop: 2장의 카드가 필요합니다.');
+    }
+
+    const sorted = cards.slice().sort(function(a,b){ return b.r - a.r; });
+    const hi = sorted[0], lo = sorted[1];
+    const isPair = hi.r === lo.r;
+    const isSuited = hi.s === lo.s;
+    const gap = hi.r - lo.r;
+
+    let score;
+    if (isPair){
+      score = 40 + ((hi.r - 2) / 12) * 60; // 22=40, AA=100
+    } else {
+      score = ((hi.r - 2) / 12) * 40 + ((lo.r - 2) / 12) * 25;
+      if (isSuited) score += 12;
+      if (gap === 1) score += 6;
+      else if (gap === 2) score += 3;
+      if (hi.r === 14 && lo.r >= 10) score += 8;
+    }
+
+    score = Math.round(Math.max(0, Math.min(100, score)));
+
+    let tier, label;
+    if (score >= 70){ tier = 'strong'; label = '강한 핸드'; }
+    else if (score >= 45){ tier = 'medium'; label = '중간 핸드'; }
+    else { tier = 'weak'; label = '약한 핸드'; }
+
+    const notation = isPair
+      ? RANK_NOTATION[hi.r] + RANK_NOTATION[lo.r]
+      : RANK_NOTATION[hi.r] + RANK_NOTATION[lo.r] + (isSuited ? 's' : 'o');
+
+    return { notation: notation, isPair: isPair, isSuited: isSuited, gap: gap, score: score, tier: tier, label: label };
+  }
+
+  // 콘솔 테스트
+  function runEngineTests(){
+    if (typeof console === 'undefined') return;
+    const card = function(r, s){ return { r: r, s: s }; };
+
+    const tests = [
+      ['로열 플러시',       [card(14,0),card(13,0),card(12,0),card(11,0),card(10,0)]],
+      ['스트레이트 플러시', [card(9,1), card(8,1), card(7,1), card(6,1), card(5,1)]],
+      ['포카드',            [card(14,0),card(14,1),card(14,2),card(14,3),card(13,0)]],
+      ['풀하우스',          [card(13,0),card(13,1),card(13,2),card(3,3), card(3,0)]],
+      ['플러시',            [card(14,2),card(11,2),card(8,2), card(5,2), card(2,2)]],
+      ['스트레이트',        [card(9,3), card(8,2), card(7,0), card(6,1), card(5,3)]],
+      ['휠 스트레이트',     [card(14,0),card(2,1), card(3,2), card(4,3), card(5,0)]],
+      ['트리플',            [card(12,0),card(12,1),card(12,2),card(8,3), card(4,0)]],
+      ['투 페어',           [card(14,0),card(14,2),card(13,1),card(13,3),card(9,0)]],
+      ['원 페어',           [card(11,0),card(11,1),card(9,2), card(5,3), card(2,0)]],
+      ['하이카드',          [card(14,0),card(12,1),card(9,2), card(7,3), card(3,0)]]
+    ];
+
+    console.group('%c[포커 엔진 테스트]', 'color:#e8b64c;font-weight:bold');
+    console.log('카드 형식: { r: 2~14, s: 0=♠ 1=♥ 2=♦ 3=♣ }');
+    console.log('--- 5장 핸드 랭킹 ---');
+    tests.forEach(function(t){
+      const r = rank5(t[1]);
+      console.log(t[0].padEnd(10, ' ') + ' → ' + describeRank(r) +
+        ' | category=' + r.category + ' | tiebreak=[' + r.tiebreak.join(',') + ']');
+    });
+
+    console.log('--- 비교 테스트 ---');
+    console.log('로열 vs 9-하이 스트레이트 플러시:',
+      compareRanks(rank5(tests[0][1]), rank5(tests[1][1])), '(1이면 정상)');
+    console.log('포카드 vs 풀하우스:',
+      compareRanks(rank5(tests[2][1]), rank5(tests[3][1])), '(1이면 정상)');
+
+    console.log('--- 포지션 (2인 / 3인 / 5인, 딜러 별도) ---');
+    console.table(calcPositions(2));
+    console.table(calcPositions(3));
+    console.table(calcPositions(5));
+
+    console.log('--- 프리플롭 핸드 분류 ---');
+    const preflop = [
+      [card(14,0), card(14,1)],
+      [card(14,0), card(13,0)],
+      [card(10,1), card(9,1)],
+      [card(2,0),  card(2,1)],
+      [card(14,3), card(13,2)],
+      [card(7,2),  card(2,3)]
+    ];
+    console.table(preflop.map(function(c){
+      const r = classifyPreflop(c);
+      return { hand: r.notation, tier: r.tier, label: r.label, score: r.score };
+    }));
+
+    console.log('--- 추천 액션 테스트 (승률 + 포지션 + 팟오즈 + 타이밍) ---');
+    const samples = [
+      { label: '프리플롭 AA · CO · 콜2/팟3', input: { street:'preflop', equity:0.85, positionScore:1, potOdds:0.40, toCall:2, pot:3, opponents:1, heroStack:100, effStack:100, bb:2, outs:0, outsType:'', specKind:null } },
+      { label: '프리플롭 72o · SB · 콜2/팟3', input: { street:'preflop', equity:0.30, positionScore:0, potOdds:0.40, toCall:2, pot:3, opponents:1, heroStack:100, effStack:100, bb:2, outs:0, outsType:'', specKind:null } },
+      { label: '플롭 드로우 · CO · 콜5/팟15', input: { street:'flop', equity:0.35, positionScore:1, potOdds:0.25, toCall:5, pot:15, opponents:1, heroStack:100, effStack:100, bb:2, outs:9, outsType:'플러시 드로우', specKind:null } },
+      { label: '리버 약한 핸드 · SB · 콜10/팟20', input: { street:'river', equity:0.20, positionScore:0, potOdds:0.33, toCall:10, pot:20, opponents:1, heroStack:100, effStack:100, bb:2, outs:0, outsType:'', specKind:null } }
+    ];
+    samples.forEach(function(s){
+      const r = decideAction(s.input);
+      console.log(s.label + ' → ' + r.action + ' | ' + r.reasonCode +
+        ' | 승률 ' + (r.equity * 100).toFixed(1) + '%');
+    });
+
+    console.log('--- 쉬운 설명 테스트 ---');
+    console.log(buildEasyExplanation(decideAction({
+      street: 'preflop', equity: 0.48, positionScore: 0.5, potOdds: 0.4,
+      toCall: 2, pot: 3, opponents: 1, position: 'CO', order: 3, players: 5
+    })));
+
+    console.groupEnd();
+  }
+
+  /* ============================================================
+     5. 승률 계산 (남은 상대 전원의 랜덤 핸드 기준)
+     ============================================================ */
+  function calcEquity(){
+    const hero = S.seats[S.heroSeat];
+    if (!hero || hero.eliminated || hero.cards.length !== 2) return 0;
+
+    const opps = S.seats.filter(function(s){
+      return !s.eliminated && !s.isHero && !s.folded;
+    });
+    if (opps.length === 0) return 1;
+
+    const known = hero.cards.concat(S.board);
+    const remaining = makeDeck().filter(function(c){
+      return !known.some(function(k){ return k.r === c.r && k.s === c.s; });
+    });
+
+    const needBoard = 5 - S.board.length;
+    const iters = opps.length === 1 ? 1100 : (opps.length === 2 ? 800 : 550);
+    let win = 0, tie = 0;
+
+    for (let t = 0; t < iters; t++){
+      const pool = remaining.slice();
+      const count = opps.length * 2 + needBoard;
+      const picks = [];
+
+      for (let k = 0; k < count; k++){
+        const j = k + randInt(pool.length - k);
+        const tmp = pool[k]; pool[k] = pool[j]; pool[j] = tmp;
+        picks.push(pool[k]);
+      }
+
+      const board = S.board.concat(picks.slice(opps.length * 2));
+      const h = rank7(hero.cards.concat(board));
+
+      let beaten = false, tied = false;
+      for (let o = 0; o < opps.length; o++){
+        const v = rank7([picks[o*2], picks[o*2+1]].concat(board));
+        const c = compareRanks(h, v);
+        if (c < 0){ beaten = true; break; }
+        if (c === 0) tied = true;
+      }
+
+      if (beaten) continue;
+      if (tied) tie++; else win++;
+    }
+
+    return (win + tie / 2) / iters;
+  }
+
+  function getEquity(){
+    const opps = S.seats.filter(function(s){
+      return !s.eliminated && !s.isHero && !s.folded;
+    }).length;
+    const key = S.token + ':' + S.street + ':' + S.board.length + ':' + opps;
+    if (S._eqKey === key) return S._eqVal;
+    const v = calcEquity();
+    S._eqKey = key;
+    S._eqVal = v;
+    return v;
+  }
+
+  /* ============================================================
+     5-1. 추천 액션 엔진
+     - 승률 + 포지션 가중치 + 팟 오즈 + 타이밍(스트리트)
+     ============================================================ */
+  const TIMING_INFO = {
+    preflop: '프리플롭 — 보드가 없습니다. 핸드 강도·포지션·블라인드 팟 오즈로 판단합니다.',
+    flop: '플롭 — 3장 공개. 메이드/드로우를 구분하고 남은 2장으로 완성될 확률을 봅니다.',
+    turn: '턴 — 1장 남음. 드로우 완성 확률이 낮아져 콜 기준이 더 엄격해집니다.',
+    river: '리버 — 추가 카드가 없습니다. 현재 승률이 최종 승률이라 블러프/밸류 판단이 중요합니다.'
+  };
+
+  const STREET_CFG = {
+    preflop: { raise: 0.68, margin: 0.03, edge: 0.26, label: '프리플롭' },
+    flop:    { raise: 0.72, margin: 0.02, edge: 0.28, label: '플롭' },
+    turn:    { raise: 0.76, margin: 0.01, edge: 0.30, label: '턴' },
+    river:   { raise: 0.82, margin: 0.00, edge: 0.32, label: '리버' }
+  };
+
+  function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+  function round3(v){ return Math.round(v * 1000) / 1000; }
+  function round2(v){ return Math.round(v * 100) / 100; }
+  function pct(v){ return (v * 100).toFixed(1) + '%'; }
+
+  // 현재 스트리트에서 내 포지션이 얼마나 뒤인지 (0=가장 먼저, 1=가장 마지막)
+  function heroPositionScore(){
+    const active = S.seats.filter(function(s){ return !s.eliminated; }).length;
+    if (active <= 1) return 0.5;
+    const hero = heroSeat();
+    const ord = S.street === 'preflop' ? hero.preflopOrder : hero.postflopOrder;
+    return clamp01((ord - 1) / (active - 1));
+  }
+
+  /**
+   * 추천 액션 계산 (순수 함수)
+   * input: { street, equity, positionScore, potOdds, toCall, pot, opponents, position }
+   * return: { street, equity, adjustedEquity, position, positionScore,
+   *           potOdds, toCall, pot, opponents, action, reasonCode, reasonText, timingText }
+   */
+  function decideAction(input){
+    const street = input.street || 'preflop';
+    const cfg = STREET_CFG[street] || STREET_CFG.preflop;
+    const equity = clamp01(input.equity);
+    const pos = clamp01(input.positionScore);
+    const toCall = Math.max(0, input.toCall || 0);
+    const potOdds = toCall > 0 ? clamp01(input.potOdds) : 0;
+
+    // 포지션 가중치: 늦은 포지션(+), 이른 포지션(-)
+    const posBonus = (pos - 0.5) * 0.08; // -0.04 ~ +0.04
+    const adj = clamp01(equity + posBonus);
+
+    let action, reasonCode, reasonText;
+    let baseAction = null, gamble = null;
+
+    if (toCall === 0){
+      // 체크 가능
+      if (adj >= cfg.raise){
+        action = 'raise';
+        reasonCode = pos >= 0.7 ? 'RAISE_POSITION_VALUE' : 'RAISE_STRONG_EQUITY';
+        reasonText = cfg.label + ': 보정 승률 ' + pct(adj) + '로 충분히 강해 베팅(레이즈)이 좋습니다.' +
+          (pos >= 0.7 ? ' 늦은 포지션이라 더 유리합니다.' : '');
+      } else if (adj >= 0.4){
+        action = 'call';
+        reasonCode = 'CHECK_MEDIUM';
+        reasonText = cfg.label + ': 보정 승률 ' + pct(adj) + '로 무리하지 않고 체크하며 팟을 지키는 편이 좋습니다.';
+      } else {
+        action = 'call';
+        reasonCode = 'CHECK_WEAK';
+        reasonText = cfg.label + ': 보정 승률 ' + pct(adj) + '로 아직 투자할 단계가 아니므로 체크합니다.';
+      }
+    } else {
+      // 콜 금액이 있음
+      if (adj < potOdds + cfg.margin){
+        action = 'fold';
+        if (adj < 0.3){
+          reasonCode = 'FOLD_WEAK_HAND';
+          reasonText = cfg.label + ': 보정 승률 ' + pct(adj) + '가 30% 미만이라 너무 약해 폴드가 좋습니다.';
+        } else if (adj < potOdds){
+          reasonCode = 'FOLD_BAD_POT_ODDS';
+          reasonText = cfg.label + ': 보정 승률 ' + pct(adj) + '가 필요 승률 ' + pct(potOdds) + '보다 낮아 폴드가 좋습니다.';
+        } else {
+          reasonCode = 'FOLD_MARGINAL';
+          reasonText = cfg.label + ': 보정 승률 ' + pct(adj) + '가 필요 승률 ' + pct(potOdds) +
+            '를 살짝 넘지만, 안전마진 ' + pct(cfg.margin) + '를 더한 ' +
+            pct(potOdds + cfg.margin) + '보다 낮아 폴드가 좋습니다.';
+        }
+      } else if (adj >= cfg.raise && adj >= potOdds + cfg.edge){
+        action = 'raise';
+        reasonCode = pos >= 0.7 ? 'RAISE_POSITION_VALUE' : 'RAISE_STRONG_EQUITY';
+        reasonText = cfg.label + ': 보정 승률 ' + pct(adj) + '로 팟 오즈(' + pct(potOdds) + ')를 크게 웃돌아 레이즈가 좋습니다.' +
+          (pos >= 0.7 ? ' 늦은 포지션 프리미엄도 있습니다.' : '');
+      } else {
+        action = 'call';
+        reasonCode = adj >= cfg.raise ? 'CALL_STRONG_BUT_CLOSE' : 'CALL_POT_ODDS';
+        reasonText = cfg.label + ': 보정 승률 ' + pct(adj) + '가 필요 승률 ' + pct(potOdds) + '를 넘어 콜이 좋습니다.';
+      }
+    }
+
+    // ---------- 승부 포인트: 확률이 낮아도 걸 만한 예외 ----------
+    gamble = evalGambleSpots({
+      street: street, equity: equity, adj: adj, pos: pos, potOdds: potOdds,
+      toCall: toCall, pot: input.pot || 0, opponents: input.opponents || 0,
+      outs: input.outs || 0, outsType: input.outsType || '',
+      heroStack: input.heroStack || 0, effStack: input.effStack || 0,
+      bb: input.bb || BB_AMOUNT, specKind: input.specKind || null
+    });
+
+    const hit = function(k){ return gamble.spots.some(function(s){ return s.key === k && s.ok; }); };
+    baseAction = action;
+    const baseLabel = actLabel(action, toCall);
+
+    // ✓ 조건이 있으면 그 조건이 요구하는 액션까지 끌어올린다 (박스·추천·쉬운설명 일치)
+    const LEVEL = { fold:0, call:1, raise:2 };
+    const WANT = { short:'raise', semi:'raise', implied:'call', spec:'call' };
+    const ORDER = ['short', 'semi', 'implied', 'spec'];
+    let used = null, support = null;
+    for (let i = 0; i < ORDER.length; i++){
+      const k = ORDER[i];
+      if (!hit(k)) continue;
+      if (LEVEL[WANT[k]] > LEVEL[action]){ used = k; break; }
+      if (!support) support = k;
+    }
+
+    if (used){
+      action = WANT[used];
+      const pre = cfg.label + ': 기본 계산은 ' + baseLabel + '(승률 ' + pct(adj) +
+        (toCall > 0 ? ' / 필요 ' + pct(potOdds) : '') + ')지만, ';
+      if (used === 'short'){
+        reasonCode = 'GAMBLE_SHORT_SHOVE';
+        reasonText = pre + '③ 숏스택(' + gamble.stackBB + 'BB)이라 기다릴수록 불리합니다. 평균 이상 핸드라 올인(슬라이더 최대)으로 승부!';
+      } else if (used === 'semi'){
+        reasonCode = 'GAMBLE_SEMI_BLUFF';
+        reasonText = pre + '② ' + (input.outsType || '드로우') + ' + 늦은 포지션이라 세미 블러프 ' +
+          (toCall > 0 ? '레이즈' : '베팅') + '가 이득입니다. 상대가 접으면 바로 팟, 콜해도 완성되면 승리.';
+      } else if (used === 'implied'){
+        reasonCode = 'GAMBLE_IMPLIED_ODDS';
+        reasonText = pre + '① 드로우가 완성되면 상대 스택에서 더 받을 수 있어(임플라이드 오즈) 콜합니다. 완성 안 되면 다음 베팅에 포기.';
+      } else {
+        reasonCode = 'GAMBLE_SET_MINING';
+        reasonText = pre + '④ 콜이 스택 대비 아주 싸서(1/15 이하) 큰 핸드를 노리고 콜합니다. 플롭에서 안 맞으면 바로 포기!';
+      }
+    }
+
+    return {
+      street: street,
+      equity: round3(equity),
+      equityPct: Math.round(equity * 1000) / 10,
+      adjustedEquity: round3(adj),
+      adjustedEquityPct: Math.round(adj * 1000) / 10,
+      position: input.position || '',
+      positionScore: round2(pos),
+      positionScorePct: Math.round(pos * 1000) / 10,
+      order: input.order || 0,
+      players: input.players || 0,
+      potOdds: round3(potOdds),
+      potOddsPct: Math.round(potOdds * 1000) / 10,
+      toCall: toCall,
+      pot: input.pot || 0,
+      opponents: input.opponents || 0,
+      action: action,
+      reasonCode: reasonCode,
+      reasonText: reasonText,
+      timingText: TIMING_INFO[street] || '',
+      baseAction: baseAction,
+      baseLabel: baseLabel,
+      gamble: gamble,
+      gambleUsed: used,
+      gambleSupport: support,
+      isGamble: !!used
+    };
+  }
+
+  function actLabel(action, toCall){
+    if (action === 'raise') return toCall > 0 ? '레이즈' : '벳';
+    if (action === 'call') return toCall > 0 ? '콜' : '체크';
+    return '폴드';
+  }
+
+  const GAMBLE_NAME = { implied:'① 임플라이드 오즈', semi:'② 세미 블러프', short:'③ 숏스택 올인', spec:'④ 셋 마이닝' };
+  const GAMBLE_EASY = {
+    short: '칩이 조금밖에 없어서 기다리면 블라인드에 다 뺏겨. 괜찮은 카드일 때 한 번에 거는 게 나아',
+    semi: '친구가 겁먹고 포기하면 바로 이기고, 안 포기해도 카드가 맞으면 이길 수 있어. 이기는 길이 두 개야',
+    implied: '지금은 조금 손해 같아도, 카드가 맞으면 친구한테 나중에 더 많이 받을 수 있어',
+    spec: '아주 싼 값에 복권을 사는 거야. 맞으면 크게 이기고, 안 맞으면 바로 그만두면 돼'
+  };
+
+  /**
+   * 승부 포인트 결론 (박스 하단 문구 + 쉬운 설명이 같은 문장을 공유)
+   * return { tipHtml, easy }
+   */
+  function gambleConclusion(rec){
+    const finalLabel = actLabel(rec.action, rec.toCall);
+    if (rec.gambleUsed){
+      const n = GAMBLE_NAME[rec.gambleUsed];
+      return {
+        tipHtml: '기본 계산은 <b>' + rec.baseLabel + '</b>였지만, <b>' + n + '</b> ✓ 때문에 <b>' + finalLabel + '</b>로 승부합니다.',
+        easy: '숫자만 보면 ' + rec.baseLabel + '야. 그런데 승부 포인트 ' + n + '에 해당해! ' +
+              GAMBLE_EASY[rec.gambleUsed] + '. 그래서 ' + finalLabel + '로 승부하는 거야.'
+      };
+    }
+    if (rec.gambleSupport){
+      const n = GAMBLE_NAME[rec.gambleSupport];
+      return {
+        tipHtml: '승률만으로도 <b>' + finalLabel + '</b>가 맞고, <b>' + n + '</b> ✓ 도 같은 방향이에요.',
+        easy: '게다가 승부 포인트 ' + n + '도 맞아서 ' + finalLabel + '가 더 확실해.'
+      };
+    }
+    if (rec.baseAction === 'fold'){
+      return {
+        tipHtml: '4가지 승부 조건 중 맞는 게 없어요. <b>이번엔 폴드</b>가 맞습니다.',
+        easy: '확률이 낮아도 걸 만한 승부 포인트 4가지를 다 봤는데, 맞는 게 하나도 없어. 그러니까 이번엔 진짜 폴드야.'
+      };
+    }
+    return {
+      tipHtml: '승부 조건은 해당 없지만 승률만으로 <b>' + finalLabel + '</b>가 충분해요.',
+      easy: ''
+    };
+  }
+
+  /**
+   * 승부 포인트 평가: 승률이 팟 오즈보다 낮아도 승부할 만한 상황인지 체크
+   * return { stackBB, spots:[{key,title,ok,na,detail}] }
+   */
+  function evalGambleSpots(c){
+    const bb = c.bb || BB_AMOUNT;
+    const stackBB = Math.round((c.heroStack / bb) * 10) / 10;
+    const remainAfter = Math.max(0, c.effStack - c.toCall);
+    const isDraw = c.outs >= 8;
+    const spots = [];
+
+    // ① 임플라이드 오즈
+    {
+      const na = c.street === 'preflop' || c.street === 'river' || c.toCall === 0;
+      const future = Math.min(remainAfter, c.pot) * (c.street === 'flop' ? 0.5 : 0.35);
+      const need = c.toCall > 0 ? c.toCall / (c.pot + c.toCall + future) : 0;
+      const ok = !na && isDraw && c.adj >= need;
+      let detail;
+      if (c.street === 'river') detail = '리버는 더 나올 카드가 없어 해당 없음.';
+      else if (c.street === 'preflop') detail = '플롭 이후 드로우가 있을 때 판단합니다.';
+      else if (c.toCall === 0) detail = '낼 돈이 없어 계산할 필요 없음.';
+      else if (!isDraw) detail = '8아웃 이상 드로우가 없음 (현재: ' + (c.outsType || '없음') + ', ' + c.outs + '아웃).';
+      else detail = '완성 시 추가 수익 약 ' + Math.round(future) + '칩 반영 → 필요 승률 ' + pct(need) + ' (원래 ' + pct(c.potOdds) + ').';
+      spots.push({ key:'implied', title:'① 임플라이드 오즈', ok: ok, na: na, detail: detail });
+    }
+
+    // ② 세미 블러프
+    {
+      const na = c.street === 'preflop' || c.street === 'river';
+      const fe = c.opponents <= 1 ? 0.35 : 0.2; // 상대가 접을 확률(추정)
+      const bet = Math.max(c.toCall * 2, c.pot * 0.66);
+      const ev = fe * c.pot + (1 - fe) * (c.adj * (c.pot + c.toCall + 2 * bet) - (c.toCall + bet));
+      const ok = !na && isDraw && c.pos >= 0.5 && c.opponents <= 2 && c.heroStack > bet && ev > 0;
+      let detail;
+      if (na) detail = c.street === 'river' ? '리버엔 드로우가 없어 순수 블러프만 가능 (권장 안 함).' : '플롭·턴에서 드로우가 있을 때 판단합니다.';
+      else if (!isDraw) detail = '드로우(8아웃 이상)가 있어야 합니다.';
+      else if (c.pos < 0.5) detail = '앞 포지션이라 불리 → 세미 블러프 비추천.';
+      else if (c.opponents > 2) detail = '상대가 ' + c.opponents + '명이라 누군가 콜할 확률이 높음.';
+      else detail = '상대 폴드 확률 약 ' + Math.round(fe * 100) + '% 가정 시 기대값 ' + (ev >= 0 ? '+' : '') + Math.round(ev) + '칩.';
+      spots.push({ key:'semi', title:'② 세미 블러프', ok: ok, na: na, detail: detail });
+    }
+
+    // ③ 숏스택 올인
+    {
+      const hasStack = typeof c.heroStack === 'number' && c.heroStack > 0 && c.bb > 0;
+      const na = c.street !== 'preflop' || !hasStack;
+      const fair = 1 / (c.opponents + 1);
+      const ok = !na && stackBB <= 10 && c.equity >= fair + 0.06;
+      let detail;
+      if (!hasStack) detail = '스택 정보가 없어 숏스택 판정을 건너뜁니다.';
+      else if (c.street !== 'preflop') detail = '프리플롭에서만 판단합니다.';
+      else if (stackBB > 10) detail = '내 칩 ' + stackBB + 'BB → 아직 여유 있음 (10BB 이하부터).';
+      else detail = '내 칩 ' + stackBB + 'BB · 승률 ' + pct(c.equity) + ' vs 기준 ' + pct(fair + 0.06) + (ok ? ' → 올인 승부!' : ' → 핸드가 약해 다음 기회.');
+      spots.push({ key:'short', title:'③ 숏스택 올인', ok: ok, na: na, detail: detail });
+    }
+
+    // ④ 셋 마이닝 / 스페큘러티브
+    {
+      const na = c.street !== 'preflop' || c.toCall === 0;
+      const cheap = c.toCall > 0 && c.effStack >= c.toCall * 15;
+      const ok = !na && !!c.specKind && cheap;
+      const kindKo = { pair:'작은/중간 페어', suitedConn:'수딧 커넥터', suitedAce:'수딧 에이스' }[c.specKind];
+      let detail;
+      if (na) detail = c.street !== 'preflop' ? '프리플롭에서만 판단합니다.' : '낼 돈이 없어 그냥 체크.';
+      else if (!c.specKind) detail = '페어·수딧 커넥터·수딧 A가 아님.';
+      else if (!cheap) detail = kindKo + '지만 콜 ' + c.toCall + '칩이 스택(' + c.effStack + ')의 1/15보다 비쌈.';
+      else detail = kindKo + ' · 콜 ' + c.toCall + '칩 ≤ 스택 ' + c.effStack + '의 1/15 → 싸게 큰 핸드를 노림.';
+      spots.push({ key:'spec', title:'④ 셋 마이닝 / 스페큘러티브', ok: ok, na: na, detail: detail });
+    }
+
+    return { stackBB: stackBB, spots: spots };
+  }
+
+  // 프리플롭 스페큘러티브 핸드 분류
+  function speculativeKind(cards){
+    if (!cards || cards.length !== 2) return null;
+    const a = cards[0], b = cards[1];
+    if (a.r === b.r) return a.r <= 10 ? 'pair' : null;
+    if (a.s === b.s){
+      if (a.r === 14 || b.r === 14) return 'suitedAce';
+      if (Math.abs(a.r - b.r) <= 2 && Math.min(a.r, b.r) >= 4) return 'suitedConn';
+    }
+    return null;
+  }
+
+  // 현재 게임 상태로 추천 계산
+  function buildRecommendation(){
+    const hero = heroSeat();
+    if (!hero || hero.eliminated || hero.folded || hero.allIn) return null;
+    if (!S.active || S.showdown || hero.cards.length !== 2) return null;
+
+    const toCall = Math.max(0, S.currentBet - hero.committed);
+    const potOdds = toCall > 0 ? toCall / (S.pot + toCall) : 0;
+    const opps = S.seats.filter(function(s){
+      return !s.eliminated && !s.isHero && !s.folded;
+    }).length;
+    const players = S.seats.filter(function(s){ return !s.eliminated; }).length;
+    const order = S.street === 'preflop' ? hero.preflopOrder : hero.postflopOrder;
+
+    const outs = estimateOuts(hero.cards, S.board);
+    let oppMax = 0;
+    S.seats.forEach(function(s){
+      if (!s.eliminated && !s.isHero && !s.folded) oppMax = Math.max(oppMax, s.stack + s.committed);
+    });
+    const effStack = Math.min(hero.stack, Math.max(0, oppMax - hero.committed));
+
+    return decideAction({
+      outs: outs.outs,
+      outsType: outs.type,
+      heroStack: hero.stack,
+      effStack: effStack,
+      bb: getBlinds().bb,
+      specKind: speculativeKind(hero.cards),
+      street: S.street,
+      equity: getEquity(),
+      positionScore: heroPositionScore(),
+      potOdds: potOdds,
+      toCall: toCall,
+      pot: S.pot,
+      opponents: opps,
+      position: hero.pos,
+      order: order,
+      players: players
+    });
+  }
+
+  /* ============================================================
+     5-2. 쉬운 설명 시스템
+     - 유치원생도 이해할 수 있는 말 + 비유 + 숫자
+     ============================================================ */
+  const EXPLANATIONS = {
+    position: {
+      'BTN': { name: '버튼(딜러)', easy: '딜러 버튼 자리야. 플롭 이후에는 마지막에 말해서 유리해' },
+      'SB': { name: '스몰 블라인드(SB)', easy: '맨 처음에 말하는 편이라 조금 불리해' },
+      'BB': { name: '빅 블라인드(BB)', easy: '두 번째로 말해서 괜찮아. 대신 시작할 때 돈을 미리 냈어' },
+      'UTG': { name: '언더 더 건(UTG)', easy: '제일 먼저 말해야 해서 제일 불리해' },
+      'HJ': { name: '하이잭(HJ)', easy: '중간쯤에 말해서 반반이야' },
+      'CO': { name: '컷오프(CO)', easy: '거의 마지막에 말해서 유리해' }
+    },
+    actionName: { raise: '레이즈', call: '콜', fold: '폴드' },
+    actionWhy: {
+      raise: '돈을 더 걸면 이겼을 때 더 많이 받아. 대신 틀리면 더 잃어',
+      call: '같은 돈을 내고 계속 놀이에 남는 거야',
+      fold: '이번 놀이는 그만하고 돈을 아끼는 거야'
+    },
+    reason: {
+      RAISE_POSITION_VALUE: '나중에 말해서 유리하고, 이길 확률도 높아',
+      RAISE_STRONG_EQUITY: '이길 확률이 아주 높아',
+      CHECK_MEDIUM: '반반이라 일단 지켜보는 게 좋아',
+      CHECK_WEAK: '아직 이길 확률이 낮아서 공격하지 않는 거야',
+      CALL_POT_ODDS: '내가 낼 돈보다 이길 확률이 더 높아',
+      CALL_STRONG_BUT_CLOSE: '이길 확률은 좋지만 더 걸기에는 조금 위험해',
+      FOLD_WEAK_HAND: '이길 확률이 너무 낮아',
+      FOLD_BAD_POT_ODDS: '본전을 위해 필요한 승률보다 내 승률이 낮아',
+      FOLD_MARGINAL: '필요 승률은 넘지만 안전마진까지 생각하면 조금 부족해',
+      GAMBLE_SHORT_SHOVE: '칩이 조금밖에 없어서 기다리면 블라인드에 다 뺏겨. 괜찮은 카드일 때 한 번에 거는 게 나아',
+      GAMBLE_SEMI_BLUFF: '친구가 겁먹고 포기하면 바로 이기고, 안 포기해도 카드가 맞으면 이길 수 있어. 이기는 길이 두 개야',
+      GAMBLE_IMPLIED_ODDS: '지금은 조금 손해 같아도, 카드가 맞으면 친구한테 나중에 더 많이 받을 수 있어',
+      GAMBLE_SET_MINING: '아주 싼 값에 복권을 사는 거야. 맞으면 크게 이기고, 안 맞으면 바로 그만두면 돼'
+    },
+
+    // 추천 결과 객체를 받아 쉬운 문장으로 만든다.
+    build: function(rec){
+      if (!rec) return '지금은 설명할 수 없어.';
+
+      const pos = EXPLANATIONS.position[rec.position] || { name: rec.position || '?', easy: '' };
+      const eq = rec.equityPct;
+      const eqWin = Math.round(eq);
+      const parts = [];
+
+      // 1) 포지션 + 순서
+      const streetKo = { preflop:'프리플롭', flop:'플롭', turn:'턴', river:'리버' }[rec.street] || '';
+      let p = '너는 지금 ' + pos.name + '야. ';
+      if (rec.players > 0 && rec.order > 0){
+        p += rec.players + '명 중 ' + rec.order + '번째로 말해(' + streetKo + ' 기준). ';
+      }
+      if (pos.easy) p += pos.easy + '.';
+      parts.push(p);
+
+      // 2) 내 패 강도
+      const hero = heroSeat();
+      if (hero && hero.cards.length === 2){
+        if (S.board.length < 3){
+          const cls = classifyPreflop(hero.cards);
+          parts.push('네 패는 ' + cls.notation + '야. ' + cls.label + '이고 ' + cls.score + '점이야.');
+        } else {
+          const ev = rank7(hero.cards.concat(S.board));
+          const outs = estimateOuts(hero.cards, S.board);
+          parts.push('지금 만든 패는 ' + describeRank(ev) + '야.' +
+            (outs.outs > 0 ? ' 아웃츠는 약 ' + outs.outs + '개야.' : ''));
+        }
+      }
+
+      // 3) 승률 (100번 비유 + 숫자)
+      if (rec.opponents > 0){
+        parts.push('너 말고 친구 ' + rec.opponents + '명이 있어. 이길 확률은 ' + eq +
+          '%야. 100번 놀이를 하면 ' + eqWin + '번 이기는 것과 같아.');
+      } else {
+        parts.push('이길 확률은 ' + eq + '%야. 100번 놀이를 하면 ' + eqWin +
+          '번 이기는 것과 같아.');
+      }
+
+      if (rec.adjustedEquityPct !== undefined && rec.adjustedEquityPct !== rec.equityPct){
+        parts.push('포지션까지 생각하면 보정 승률은 ' + rec.adjustedEquityPct + '%야.');
+      }
+
+      // 3) 콜 금액과 팟 오즈
+      if (rec.toCall > 0){
+        const needWin = Math.round(rec.potOddsPct);
+        parts.push('콜하려면 ' + rec.toCall + '칩을 더 내야 해. 지금 팟은 ' + rec.pot +
+          '칩이야. ' + rec.toCall + '÷(' + rec.pot + '+' + rec.toCall + ')=' + rec.potOddsPct +
+          '%. 그래서 100번 중 ' + needWin + '번은 이겨야 본전이야.');
+      } else {
+        parts.push('지금은 콜할 돈이 없어서 그냥 체크할 수 있어.');
+      }
+
+      // 4~5) 왜 그런지 + 추천 액션 (승부 포인트 결론과 동일하게)
+      const concl = rec.gamble ? gambleConclusion(rec) : null;
+      if (concl && rec.gambleUsed){
+        parts.push('👉 ' + concl.easy);
+      } else {
+        const why = EXPLANATIONS.reason[rec.reasonCode];
+        if (why) parts.push('왜냐하면 ' + why + '.');
+        let actionWord, actionWhy;
+        actionWord = actLabel(rec.action, rec.toCall);
+        actionWhy = (rec.action === 'call' && rec.toCall === 0)
+          ? '아직 돈을 안 내고 한 번 지켜보는 거야'
+          : (EXPLANATIONS.actionWhy[rec.action] || '');
+        parts.push('👉 그래서 ' + actionWord + ' 하는 게 좋아. ' + actionWhy + '.');
+        if (concl && concl.easy) parts.push(concl.easy);
+      }
+
+      return parts.join('\n');
+    }
+  };
+
+  function buildEasyExplanation(rec){
+    return EXPLANATIONS.build(rec);
+  }
+
+  /* ============================================================
+     5-2-1. 강도 · 아웃츠 해석
+     ============================================================ */
+  function estimateOuts(heroCards, board){
+    if (board.length < 3){
+      return { outs: 0, type: '프리플롭', note: '보드가 없어 아웃츠를 세지 않습니다.' };
+    }
+
+    const all = heroCards.concat(board);
+    const suitCount = [0, 0, 0, 0];
+    all.forEach(function(c){ suitCount[c.s]++; });
+    const maxSuit = Math.max.apply(null, suitCount);
+
+    if (maxSuit >= 5) return { outs: 0, type: '메이드 플러시', note: '같은 무늬 5장 완성' };
+    if (maxSuit === 4) return { outs: 9, type: '플러시 드로우', note: '같은 무늬 4장 → 9아웃' };
+
+    const rankSet = {};
+    all.forEach(function(c){ rankSet[c.r] = true; });
+    if (rankSet[14]) rankSet[1] = true; // A를 1로도 사용
+
+    // 이미 스트레이트
+    for (let r = 1; r <= 10; r++){
+      let ok = true;
+      for (let k = 0; k < 5; k++) if (!rankSet[r+k]){ ok = false; break; }
+      if (ok) return { outs: 0, type: '메이드 스트레이트', note: '5장 연속 완성' };
+    }
+
+    // 오픈엔드 스트레이트 드로우
+    for (let r = 1; r <= 10; r++){
+      let ok = true;
+      for (let k = 0; k < 4; k++) if (!rankSet[r+k]){ ok = false; break; }
+      if (ok) return { outs: 8, type: '오픈엔드 스트레이트 드로우', note: '양쪽 끝 → 8아웃' };
+    }
+
+    // 갯수 스트레이트 드로우
+    for (let r = 1; r <= 10; r++){
+      let cnt = 0;
+      for (let k = 0; k < 5; k++) if (rankSet[r+k]) cnt++;
+      if (cnt === 4) return { outs: 4, type: '스트레이트 드로우(갯수)', note: '한 장 부족 → 4아웃' };
+    }
+
+    // 이미 만들어진 핸드
+    const ev = rank7(heroCards.concat(board));
+    if (ev.category >= 3) return { outs: 0, type: describeRank(ev), note: '이미 강한 핸드' };
+    if (ev.category === 2) return { outs: 4, type: describeRank(ev), note: '풀하우스로 좋아질 4아웃' };
+    if (ev.category === 1) return { outs: 5, type: describeRank(ev), note: '투페어/트리플로 좋아질 5아웃' };
+
+    const boardHigh = Math.max.apply(null, board.map(function(c){ return c.r; }));
+    if (heroCards[0].r > boardHigh && heroCards[1].r > boardHigh){
+      return { outs: 6, type: '오버카드', note: '더 높은 페어 6아웃' };
+    }
+
+    return { outs: 0, type: '드로우 없음', note: '뚜렷한 아웃츠가 없습니다' };
+  }
+
+  function buildStrengthExplanation(rec){
+    if (!rec) return '';
+    const hero = heroSeat();
+    if (!hero || hero.eliminated || hero.folded || hero.cards.length !== 2) return '';
+
+    const eq = rec.equityPct;
+    const opps = rec.opponents;
+    const parts = [];
+
+    if (S.board.length < 3){
+      const cls = classifyPreflop(hero.cards);
+      parts.push('현재 강도: ' + cls.notation + ' · ' + cls.label + ' (' + cls.score + '점) · 상대 ' + opps + '명.');
+      parts.push('프리플롭이라 보드가 없어요. ' + cls.notation + '는 ' + cls.label +
+        '이고, 상대 ' + opps + '명을 동시에 이겨야 해서 승률이 ' + eq + '%로 나옵니다.');
+    } else {
+      const ev = rank7(hero.cards.concat(S.board));
+      parts.push('현재 강도: ' + describeRank(ev) + ' · 상대 ' + opps + '명.');
+
+      const remain = 5 - S.board.length;
+      if (remain === 0){
+        parts.push('리버라 더 나올 카드가 없어요. 지금 승률이 최종 승률입니다.');
+      } else {
+        const outs = estimateOuts(hero.cards, S.board);
+        if (outs.outs > 0){
+          const improve = remain === 2 ? outs.outs * 4 : outs.outs * 2;
+          parts.push('아웃츠 약 ' + outs.outs + '개 (' + outs.type + '). 남은 ' + remain +
+            '장 기준 대략 ' + improve + '% 정도 더 좋아질 수 있어요.');
+        } else {
+          parts.push('아웃츠: ' + outs.type + ' (' + outs.note + ').');
+        }
+        parts.push('현재 승률 ' + eq + '%는 남은 카드와 상대 ' + opps +
+          '명의 핸드까지 모두 고려한 값입니다.');
+      }
+    }
+
+    if (opps > 1){
+      parts.push('상대가 ' + opps + '명이라 한 명만 나를 이겨도 지기 때문에, 1명일 때보다 승률이 낮아집니다.');
+    } else if (opps === 1){
+      parts.push('상대가 1명이라 승률이 비교적 단순하게 계산됩니다.');
+    }
+
+    if (rec.adjustedEquityPct !== rec.equityPct){
+      parts.push('포지션 보정을 더하면 ' + rec.adjustedEquityPct + '%로 보고 판단합니다.');
+    }
+
+    return parts.join(' ');
+  }
+
+  // 승부 포인트 박스에 넣을 한 줄 강도 요약
+  function buildStrengthLine(rec){
+    const hero = heroSeat();
+    if (!hero || hero.cards.length !== 2) return '-';
+
+    if (S.board.length < 3){
+      const cls = classifyPreflop(hero.cards);
+      return cls.notation + ' · ' + cls.label + ' (' + cls.score + '점) · 상대 ' + rec.opponents + '명';
+    }
+
+    const ev = rank7(hero.cards.concat(S.board));
+    const outs = estimateOuts(hero.cards, S.board);
+    return describeRank(ev) +
+      (outs.outs > 0 ? ' · 약 ' + outs.outs + '아웃' : '') +
+      ' · 상대 ' + rec.opponents + '명';
+  }
+
+  /* ============================================================
+     5-3. 학습 피드백 (추천 vs 내 선택 / 핸드 요약)
+     ============================================================ */
+  function recordHeroDecision(action, label){
+    const rec = buildRecommendation();
+
+    const recLabel = rec ? actLabel(rec.action, rec.toCall) : null;
+
+    const d = {
+      street: S.street,
+      action: action,
+      label: label,
+      recAction: rec ? rec.action : null,
+      recLabel: recLabel,
+      followed: rec ? (rec.action === action) : null,
+      equity: rec ? rec.equityPct : null,
+      adjustedEquity: rec ? rec.adjustedEquityPct : null,
+      potOdds: rec ? rec.potOddsPct : null,
+      reasonCode: rec ? rec.reasonCode : null,
+      reasonText: rec ? rec.reasonText : null
+    };
+
+    S.heroDecisions.push(d);
+    S.lastFeedback = d;
+    return d;
+  }
+
+  function buildHandSummary(){
+    const ds = S.heroDecisions || [];
+    if (!ds.length) return '이번 핸드: 행동할 차례가 없었어.';
+
+    const last = ds[ds.length - 1];
+    const matched = ds.filter(function(d){ return d.followed; }).length;
+    const streetKo = STREET_NAMES[last.street] || last.street;
+    let main;
+
+    if (last.followed){
+      main = streetKo + '에서 ' + last.label + '한 게 추천과 맞았어.';
+    } else if (last.recLabel){
+      main = streetKo + '에서 ' + last.recLabel + '하는 게 더 나았어. (내 선택: ' + last.label + ')';
+    } else {
+      main = '추천을 계산할 수 없는 상황이었어.';
+    }
+
+    return '이번 핸드: ' + main + ' · 추천 일치 ' + matched + '/' + ds.length;
+  }
+
+  // 핸드 종료 결과 토스트 — 사용자가 누를 때까지 유지
+  function showHandToast(result, isFinal){
+    const el = document.getElementById('handToast');
+    if (!el || !result) return;
+
+    const names = result.winners.map(function(i){ return S.seats[i].pos; }).join(', ');
+    document.getElementById('toastTitle').textContent =
+      names + (result.winners.length > 1 ? ' 스플릿' : ' 포지션 승리');
+    document.getElementById('toastReason').textContent = '이유: ' + result.reason;
+    document.getElementById('toastAmount').textContent = '획득: ' + result.amount + '칩' +
+      (result.winners.length > 1 ? ' (각 ' + result.share + '칩)' : '');
+
+    document.getElementById('toastNext').textContent = isFinal ? '결과 보기' : '다음 핸드';
+    el.classList.add('show');
+  }
+
+  /* ============================================================
+     6. 게임 흐름
+     ============================================================ */
+  function getBlinds(){
+    const mult = Math.pow(2, Math.floor(Math.max(0, S.handNo - 1) / 10));
+    return { sb: SB_AMOUNT * mult, bb: BB_AMOUNT * mult };
+  }
+
+  function heroSeat(){ return S.seats[S.heroSeat]; }
+  function isHeroTurn(){
+    const h = heroSeat();
+    return S.active && !S.processing && !h.eliminated && !h.folded && S.turn === S.heroSeat;
+  }
+
+  function pay(seat, amount){
+    const a = Math.max(0, Math.min(amount, seat.stack));
+    seat.stack -= a;
+    seat.committed += a;
+    S.pot += a;
+    if (seat.stack === 0) seat.allIn = true;
+    return a;
+  }
+
+  function log(msg){
+    S.log.unshift(msg);
+    if (S.log.length > 14) S.log.pop();
+  }
+
+  // 버튼 좌석을 기준으로 포지션을 다시 배정
+  function assignPositions(){
+    const active = S.seats
+      .filter(function(s){ return !s.eliminated; })
+      .sort(function(a,b){ return a.seat - b.seat; });
+
+    // 버튼 좌석이 탈락했으면 다음 활성 좌석으로 보정
+    let start = active.findIndex(function(s){ return s.seat === S.buttonSeat; });
+    if (start < 0){
+      for (let step = 1; step <= S.seats.length; step++){
+        const target = (S.buttonSeat + step) % S.seats.length;
+        const idx = active.findIndex(function(s){ return s.seat === target; });
+        if (idx >= 0){
+          S.buttonSeat = target;
+          start = idx;
+          break;
+        }
+      }
+    }
+    if (start < 0) start = 0;
+
+    // 버튼부터 시계방향 순서로 재배열
+    const order = [];
+    for (let k = 0; k < active.length; k++){
+      order.push(active[(start + k) % active.length]);
+    }
+
+    S.activeOrder = order;
+    const list = calcPositions(order.length);
+
+    order.forEach(function(s, i){
+      s.pos = list[i].position;
+      s.isButton = list[i].isButton;
+      s.isSB = list[i].isSB;
+      s.isBB = list[i].isBB;
+      s.preflopOrder = list[i].preflopOrder;
+      s.postflopOrder = list[i].postflopOrder;
+    });
+
+    S.seats.forEach(function(s){
+      if (s.eliminated){
+        s.pos = '';
+        s.isButton = false;
+        s.isSB = false;
+        s.isBB = false;
+      }
+    });
+  }
+
+  // 버튼을 시계방향으로 한 자리 이동 (탈락한 자리는 건너뜀)
+  function advanceButton(){
+    const n = S.seats.length;
+    for (let step = 1; step <= n; step++){
+      const target = (S.buttonSeat + step) % n;
+      if (!S.seats[target].eliminated){
+        S.buttonSeat = target;
+        return;
+      }
+    }
+  }
+
+  function newGame(){
+    const n = parseInt(document.getElementById('playerCount').value, 10);
+    let pos = document.getElementById('heroPos').value;
+    if (POSITIONS[n].indexOf(pos) < 0) pos = POSITIONS[n][POSITIONS[n].length - 1];
+
+    S.token++;
+    S.n = n;
+    S.heroStartPos = pos;
+    S.heroSeat = POSITIONS[n].indexOf(pos);
+    if (S.heroSeat < 0) S.heroSeat = 0;
+    S.buttonSeat = 0;
+    S.handNo = 0;
+    S.gameOver = false;
+    S.showOverlay = false;
+    S.winnerSeat = -1;
+    S.lastResult = null;
+
+    const toastEl = document.getElementById('handToast');
+    if (toastEl) toastEl.classList.remove('show');
+    S.log = [];
+    S.result = null;
+    S.board = [];
+    S.pot = 0;
+    S.street = 'preflop';
+    S.turn = -1;
+    S.active = false;
+    S.showdown = false;
+    S.processing = false;
+
+    S.seats = [];
+    for (let i = 0; i < n; i++){
+      S.seats.push({
+        seat: i,
+        pos: '',
+        isButton: false,
+        isSB: false,
+        isBB: false,
+        preflopOrder: 0,
+        postflopOrder: 0,
+        stack: START_STACK,
+        cards: [],
+        folded: false,
+        allIn: false,
+        eliminated: false,
+        committed: 0,
+        acted: false,
+        isHero: i === S.heroSeat
+      });
+    }
+
+    assignPositions();
+    render();
+    newHand();
+  }
+
+  function newHand(){
+    if (S.gameOver) return;
+    S.token++;
+
+    const active = S.seats.filter(function(s){ return !s.eliminated; });
+    if (active.length < 2){
+      finishGame();
+      return;
+    }
+
+    S.activeOrder = active;
+    assignPositions();
+
+    S.handNo++;
+    const blinds = getBlinds();
+    S.deck = shuffle(makeDeck());
+    S.board = [];
+    S.pot = 0;
+    S.street = 'preflop';
+    S.currentBet = blinds.bb;
+    S.minRaise = blinds.bb;
+    S.turn = -1;
+    S.active = true;
+    S.showdown = false;
+    S.processing = false;
+    S.result = null;
+    S.heroDecisions = [];
+    S.lastFeedback = null;
+    S._eqKey = null;
+    S._eqVal = 0.5;
+
+    S.seats.forEach(function(s){
+      s.cards = [];
+      s.folded = false;
+      s.allIn = false;
+      s.committed = 0;
+      s.acted = false;
+      if (!s.eliminated){
+        s.cards = [S.deck.pop(), S.deck.pop()];
+      }
+    });
+
+    // 블라인드
+    // 2인: 버튼이 SB를 겸함 (버튼=SB, 나머지=BB)
+    // 3인 이상: 버튼 왼쪽이 SB, 그다음이 BB
+    let sbSeat, bbSeat;
+    if (active.length === 2){
+      sbSeat = S.activeOrder[0];
+      bbSeat = S.activeOrder[1];
+    } else {
+      sbSeat = S.activeOrder[1];
+      bbSeat = S.activeOrder[2];
+    }
+
+    const sbPaid = pay(sbSeat, Math.min(blinds.sb, sbSeat.stack));
+    const bbPaid = pay(bbSeat, Math.min(blinds.bb, bbSeat.stack));
+
+    log('핸드 #' + S.handNo + ' · ' + active.length + '명 · 블라인드 ' + blinds.sb + '/' + blinds.bb);
+    log('SB ' + sbSeat.pos + ' ' + sbPaid + ' / BB ' + bbSeat.pos + ' ' + bbPaid);
+
+    render();
+
+    // 프리플롭 첫 행동
+    // 2인/3인: 버튼이 먼저, 4인 이상: UTG(버튼+3번째)
+    const first = active.length >= 4 ? S.activeOrder[3] : S.activeOrder[0];
+    beginTurn(first.seat);
+  }
+
+  function beginTurn(idx){
+    if (!S.active || S.gameOver) return;
+
+    const seat = S.seats[idx];
+    if (!seat || seat.eliminated || seat.folded || seat.allIn){
+      const next = nextNeedingAction(idx);
+      if (next === -1) endRound();
+      else beginTurn(next);
+      return;
+    }
+
+    S.turn = idx;
+    S.processing = false;
+    if (idx === S.heroSeat) resetBetSize();
+    render();
+
+    if (idx === S.heroSeat) return;
+
+    S.processing = true;
+    render();
+
+    const token = S.token;
+    const heroOut = heroSeat().eliminated;
+    setTimeout(function(){
+      if (token !== S.token || !S.active || S.gameOver) return;
+      aiAct(idx);
+    }, heroOut ? AI_DELAY_FAST : AI_DELAY);
+  }
+
+  function nextNeedingAction(from){
+    const active = S.seats.filter(function(s){ return !s.eliminated; });
+    let start = active.findIndex(function(s){ return s.seat === from; });
+    if (start < 0) start = 0;
+
+    for (let k = 1; k <= active.length; k++){
+      const s = active[(start + k) % active.length];
+      if (s.folded || s.allIn) continue;
+      if (!s.acted || s.committed < S.currentBet) return s.seat;
+    }
+    return -1;
+  }
+
+  function afterAction(from){
+    const alive = S.seats.filter(function(s){ return !s.eliminated && !s.folded; });
+    if (alive.length === 1){
+      award(alive[0], '모두 폴드');
+      return;
+    }
+
+    const next = nextNeedingAction(from);
+    if (next === -1){
+      endRound();
+      return;
+    }
+    beginTurn(next);
+  }
+
+  function clearStreet(){
+    S.seats.forEach(function(s){
+      s.committed = 0;
+      s.acted = false;
+    });
+    S.currentBet = 0;
+    S.minRaise = getBlinds().bb;
+  }
+
+  function endRound(){
+    if (S.street === 'river'){
+      showdown();
+      return;
+    }
+
+    clearStreet();
+
+    if (S.street === 'preflop'){
+      S.street = 'flop';
+      S.board.push(S.deck.pop(), S.deck.pop(), S.deck.pop());
+      log('플롭 공개');
+    } else if (S.street === 'flop'){
+      S.street = 'turn';
+      S.board.push(S.deck.pop());
+      log('턴 공개');
+    } else if (S.street === 'turn'){
+      S.street = 'river';
+      S.board.push(S.deck.pop());
+      log('리버 공개');
+    }
+
+    const canAct = S.seats.filter(function(s){
+      return !s.eliminated && !s.folded && !s.allIn;
+    }).length;
+
+    if (canAct <= 1){
+      while (S.board.length < 5) S.board.push(S.deck.pop());
+      showdown();
+      return;
+    }
+
+    // 플롭 이후 첫 행동: SB 자리부터 (2인은 BB가 먼저)
+    const order = S.activeOrder;
+    if (!order.length) return;
+    for (let k = 1; k <= order.length; k++){
+      const s = order[k % order.length];
+      if (!s.eliminated && !s.folded && !s.allIn){
+        beginTurn(s.seat);
+        return;
+      }
+    }
+  }
+
+  function award(seat, reason){
+    const amount = S.pot;
+    S.lastResult = {
+      winners: [seat.seat],
+      reason: reason,
+      amount: amount,
+      share: amount
+    };
+    seat.stack += amount;
+    S.result = seat.pos + ' 승리 · ' + reason + ' · 팟 ' + amount;
+    S.pot = 0;
+    S.active = false;
+    S.processing = false;
+    S.turn = -1;
+    log(S.result);
+    finishHand();
+  }
+
+  function showdown(){
+    S.street = 'showdown';
+    S.showdown = true;
+    S.active = false;
+    S.processing = false;
+    S.turn = -1;
+
+    while (S.board.length < 5) S.board.push(S.deck.pop());
+
+    const alive = S.seats.filter(function(s){ return !s.eliminated && !s.folded; });
+    const evals = alive.map(function(s){
+      return { seat: s, ev: rank7(s.cards.concat(S.board)) };
+    });
+
+    let best = evals[0];
+    evals.forEach(function(e){
+      if (compareRanks(e.ev, best.ev) > 0) best = e;
+    });
+
+    const winners = evals.filter(function(e){
+      return compareRanks(e.ev, best.ev) === 0;
+    });
+
+    const amount = S.pot;
+    const share = Math.floor(amount / winners.length);
+    let rest = amount - share * winners.length;
+
+    S.lastResult = {
+      winners: winners.map(function(w){ return w.seat.seat; }),
+      reason: (winners.length > 1 ? '무승부 · ' : '') + describeRank(best.ev),
+      amount: amount,
+      share: share
+    };
+
+    winners.forEach(function(w, i){
+      w.seat.stack += share + (i < rest ? 1 : 0);
+    });
+
+    S.result = winners.map(function(w){ return w.seat.pos; }).join(', ') +
+      ' 승리 · ' + describeRank(best.ev) + ' · 팟 ' + amount;
+    S.pot = 0;
+    log(S.result);
+    finishHand();
+  }
+
+  // 핸드 종료 후: 탈락 처리 → 다음 핸드 or 게임 종료
+  function finishHand(){
+    S.active = false;
+    S.processing = false;
+    S.turn = -1;
+
+    S.seats.forEach(function(s){
+      if (!s.eliminated && s.stack <= 0){
+        s.eliminated = true;
+        s.cards = [];
+        s.folded = true;
+        log(s.pos + ' 탈락 · 좌석 비움');
+      }
+    });
+
+    S.lastHandSummary = buildHandSummary();
+    log(S.lastHandSummary);
+
+    const left = S.seats.filter(function(s){ return !s.eliminated; });
+    render();
+    showHandToast(S.lastResult, left.length <= 1);
+
+    if (left.length <= 1){
+      finishGame();
+      return;
+    }
+
+    // 다음 핸드에서 버튼을 시계방향으로 한 자리 이동
+    advanceButton();
+
+    // 사용자가 '다음 핸드'를 누를 때까지 여기서 대기
+  }
+
+  function finishGame(){
+    S.active = false;
+    S.gameOver = true;
+    S.processing = false;
+    S.turn = -1;
+
+    const left = S.seats.filter(function(s){ return !s.eliminated; });
+    S.winnerSeat = left.length ? left[0].seat : -1;
+    S.result = S.winnerSeat >= 0
+      ? S.seats[S.winnerSeat].pos + ' 포지션 승리!'
+      : '무승부';
+
+    log(S.result);
+    render();
+    // '결과 보기'를 누를 때까지 최종 오버레이를 띄우지 않는다.
+  }
+
+  /* ============================================================
+     7. AI
+     ============================================================ */
+  function preflopStrength(cards){
+    const s = cards.slice().sort(function(a,b){ return b.r - a.r; });
+    const a = s[0], b = s[1];
+    let v;
+    if (a.r === b.r){
+      v = 0.5 + (a.r - 2) / 24 * 0.45;
+    } else {
+      v = (a.r + b.r) / 28 * 0.55;
+      if (a.s === b.s) v += 0.06;
+      if (Math.abs(a.r - b.r) === 1) v += 0.05;
+      if (a.r >= 13 && b.r >= 10) v += 0.07;
+    }
+    return Math.min(0.98, v);
+  }
+
+  function madeStrength(seat){
+    if (S.board.length < 3) return preflopStrength(seat.cards);
+    const ev = rank7(seat.cards.concat(S.board));
+    const table = [0.12, 0.33, 0.55, 0.72, 0.82, 0.88, 0.94, 0.98, 1.0];
+    return table[ev.category];
+  }
+
+  function aiRaiseTarget(seat){
+    const maxTo = seat.committed + seat.stack;
+    const blinds = getBlinds();
+    const minTo = S.currentBet + S.minRaise;
+    let target;
+    if (S.street === 'preflop'){
+      target = Math.max(minTo, blinds.bb * 3);
+    } else {
+      target = Math.max(minTo, S.currentBet + Math.round(S.pot * 0.6));
+    }
+    return Math.min(target, maxTo);
+  }
+
+  function aiAct(idx){
+    if (!S.active || S.gameOver || S.showdown || S.turn !== idx) return;
+    const seat = S.seats[idx];
+    if (seat.folded || seat.allIn || seat.eliminated) return;
+
+    const toCall = Math.max(0, S.currentBet - seat.committed);
+    const strength = madeStrength(seat);
+    const potOdds = toCall > 0 ? toCall / (S.pot + toCall) : 0;
+    const r = Math.random();
+
+    const target = aiRaiseTarget(seat);
+    const canRaise = target > S.currentBet && seat.stack > toCall;
+
+    if (toCall > 0){
+      if (strength < potOdds * 1.05 && r < 0.72){
+        actFold(idx);
+        return;
+      }
+      if (canRaise && strength > 0.8 && r < 0.3){
+        actRaise(idx, target);
+        return;
+      }
+      actCall(idx);
+      return;
+    }
+
+    if (canRaise && strength > 0.66 && r < 0.5){
+      actRaise(idx, target);
+      return;
+    }
+    if (canRaise && strength < 0.28 && r < 0.07){
+      actRaise(idx, target);
+      return;
+    }
+    actCall(idx);
+  }
+
+  /* ============================================================
+     8. 액션
+     ============================================================ */
+  function actFold(idx){
+    const seat = S.seats[idx];
+    seat.folded = true;
+    seat.acted = true;
+    log(seat.pos + ' 폴드');
+    afterAction(idx);
+  }
+
+  function actCall(idx){
+    const seat = S.seats[idx];
+    const need = Math.max(0, S.currentBet - seat.committed);
+    if (need > 0){
+      const paid = pay(seat, need);
+      log(seat.pos + ' 콜 ' + paid);
+    } else {
+      log(seat.pos + ' 체크');
+    }
+    seat.acted = true;
+    afterAction(idx);
+  }
+
+  function actRaise(idx, raiseTo){
+    const seat = S.seats[idx];
+    const prev = S.currentBet;
+    const maxTo = seat.committed + seat.stack;
+    raiseTo = Math.min(raiseTo, maxTo);
+
+    if (raiseTo <= prev){
+      actCall(idx);
+      return;
+    }
+
+    pay(seat, raiseTo - seat.committed);
+    S.currentBet = raiseTo;
+
+    const inc = raiseTo - prev;
+    if (inc >= S.minRaise) S.minRaise = inc;
+
+    seat.acted = true;
+    S.seats.forEach(function(s, j){
+      if (j !== idx && !s.eliminated && !s.folded && !s.allIn) s.acted = false;
+    });
+
+    log(seat.pos + ' 레이즈 ' + raiseTo);
+    afterAction(idx);
+  }
+
+  /* ============================================================
+     9. 히어로 액션
+     ============================================================ */
+  function doFold(){
+    if (!isHeroTurn()) return;
+    recordHeroDecision('fold', '폴드');
+    S.processing = true;
+    actFold(S.heroSeat);
+  }
+
+  function doCallCheck(){
+    if (!isHeroTurn()) return;
+    const hero = heroSeat();
+    const need = Math.max(0, S.currentBet - hero.committed);
+    recordHeroDecision('call', need > 0 ? '콜' : '체크');
+    S.processing = true;
+    actCall(S.heroSeat);
+  }
+
+  function doRaise(){
+    if (!isHeroTurn()) return;
+    const amount = parseInt(document.getElementById('amount').value, 10);
+    if (!(amount > S.currentBet)) return;
+    recordHeroDecision('raise', S.currentBet > 0 ? '레이즈' : '벳');
+    S.processing = true;
+    actRaise(S.heroSeat, amount);
+  }
+
+  /* ============================================================
+     10. 렌더링
+     ============================================================ */
+  function renderStudyFeedback(){
+    const verdict = document.getElementById('fbVerdict');
+    const detail = document.getElementById('fbDetail');
+    const fb = S.lastFeedback;
+
+    if (!fb){
+      verdict.textContent = '아직 액션이 없어요';
+      verdict.className = 'fbVerdict';
+      detail.textContent = '카드와 포지션을 확인하고 폴드/콜/레이즈를 선택해 보세요.';
+    } else {
+      if (fb.followed === null){
+        verdict.textContent = '추천을 계산할 수 없었어요';
+        verdict.className = 'fbVerdict';
+      } else if (fb.followed){
+        verdict.textContent = '추천과 일치';
+        verdict.className = 'fbVerdict good';
+      } else {
+        verdict.textContent = '추천과 다름';
+        verdict.className = 'fbVerdict bad';
+      }
+
+      const streetKo = { preflop:'프리플롭', flop:'플롭', turn:'턴', river:'리버' }[fb.street] || fb.street;
+      const parts = [];
+      parts.push(streetKo + ' 액션');
+      parts.push('추천: ' + (fb.recLabel || '-'));
+      parts.push('내 선택: ' + fb.label);
+      if (fb.equity !== null && fb.equity !== undefined) parts.push('승률: ' + fb.equity + '%');
+      if (fb.adjustedEquity !== null && fb.adjustedEquity !== undefined) parts.push('보정: ' + fb.adjustedEquity + '%');
+      if (fb.potOdds !== null && fb.potOdds !== undefined) parts.push('필요 승률: ' + fb.potOdds + '%');
+      if (fb.reasonCode) parts.push('코드: ' + fb.reasonCode);
+
+      detail.textContent = parts.join(' · ') +
+        (fb.reasonText ? '\n이유: ' + fb.reasonText : '');
+    }
+
+    document.getElementById('handSummaryText').textContent =
+      S.lastHandSummary || '아직 끝난 핸드가 없어요.';
+  }
+
+  function render(){
+    renderSeats();
+    renderBoard();
+    renderCenter();
+    renderPanel();
+    renderStudyFeedback();
+    renderPositionGuide();
+    renderOverlay();
+  }
+
+  function seatAngle(i){
+    // 2인: 120°, 60° / 5인: 120° ~ 60° (딜러는 90° 아래 중앙)
+    if (S.n === 1) return 90;
+    return 120 + (i * 300) / (S.n - 1);
+  }
+
+  function renderSeats(){
+    const wrap = document.getElementById('seats');
+    wrap.innerHTML = '';
+
+    S.seats.forEach(function(seat, i){
+      const rad = seatAngle(i) * Math.PI / 180;
+      const x = 50 + 43 * Math.cos(rad);
+      const y = 50 + 40 * Math.sin(rad);
+
+      const el = document.createElement('div');
+
+      // 탈락한 좌석 → 빈 자리
+      if (seat.eliminated){
+        el.className = 'seat empty';
+        el.style.left = x + '%';
+        el.style.top = y + '%';
+        const empty = document.createElement('div');
+        empty.className = 'emptyPlate';
+        empty.textContent = '빈 자리';
+        el.appendChild(empty);
+        wrap.appendChild(el);
+        return;
+      }
+
+      el.className = 'seat' +
+        (seat.isHero ? ' hero' : '') +
+        (seat.folded ? ' folded' : '') +
+        (i === S.turn && S.active ? ' turn' : '');
+
+      el.style.left = x + '%';
+      el.style.top = y + '%';
+      el.title = seat.pos + ' (' + (POS_EN[seat.pos] || '') + ')' +
+        ' — 프리플롭 ' + seat.preflopOrder + '번째' +
+        ' / 플롭 이후 ' + seat.postflopOrder + '번째';
+
+      // 카드
+      const cards = document.createElement('div');
+      cards.className = 'seatCards';
+      const reveal = seat.isHero || (S.showdown && !seat.folded);
+      seat.cards.forEach(function(c){
+        cards.appendChild(reveal ? cardEl(c) : backEl());
+      });
+      el.appendChild(cards);
+
+      // 이름판
+      const plate = document.createElement('div');
+      plate.className = 'plate';
+
+      const posWrap = document.createElement('div');
+      posWrap.className = 'posWrap';
+
+      const pos = document.createElement('span');
+      pos.className = 'pos';
+      pos.textContent = seat.pos + (seat.isHero ? ' (나)' : '');
+
+      const posKo = document.createElement('span');
+      posKo.className = 'posKo';
+      posKo.textContent = POS_KO[seat.pos] || '';
+
+      posWrap.appendChild(pos);
+      posWrap.appendChild(posKo);
+
+      const stack = document.createElement('span');
+      stack.className = 'stack';
+      stack.textContent = seat.stack;
+
+      plate.appendChild(posWrap);
+      plate.appendChild(stack);
+      el.appendChild(plate);
+
+      // 버튼(D) 표시 — 매 핸드 시계방향으로 이동
+      if (seat.isButton){
+        const d = document.createElement('span');
+        d.className = 'dealer';
+        d.textContent = 'D';
+        el.appendChild(d);
+      }
+
+      // 블라인드 표시
+      if (seat.isSB || seat.isBB){
+        const b = document.createElement('span');
+        b.className = 'blind';
+        b.textContent = seat.isSB ? 'SB' : 'BB';
+        el.appendChild(b);
+      }
+
+      // 베팅 칩
+      if (seat.committed > 0 && !seat.folded){
+        const chip = document.createElement('span');
+        chip.className = 'betChip';
+        chip.textContent = seat.committed;
+        el.appendChild(chip);
+      }
+
+      // 현재 차례
+      if (i === S.turn && S.active){
+        const dot = document.createElement('span');
+        dot.className = 'turnDot';
+        el.appendChild(dot);
+      }
+
+      // 폴드 / 올인
+      if (seat.folded){
+        const f = document.createElement('span');
+        f.className = 'foldTag';
+        f.textContent = '폴드';
+        el.appendChild(f);
+      } else if (seat.allIn){
+        const a = document.createElement('span');
+        a.className = 'allInTag';
+        a.textContent = '올인';
+        el.appendChild(a);
+      }
+
+      wrap.appendChild(el);
+    });
+  }
+
+  function renderBoard(){
+    const board = document.getElementById('board');
+    board.innerHTML = '';
+    for (let i = 0; i < 5; i++){
+      if (i < S.board.length){
+        board.appendChild(cardEl(S.board[i]));
+      } else {
+        const slot = document.createElement('span');
+        slot.className = 'card slot';
+        board.appendChild(slot);
+      }
+    }
+  }
+
+  function renderCenter(){
+    document.getElementById('streetLabel').textContent = STREET_NAMES[S.street] || '';
+
+    const blinds = getBlinds();
+    document.getElementById('blindsLabel').textContent = '블라인드 ' + blinds.sb + ' / ' + blinds.bb;
+
+    document.getElementById('potLabel').textContent = S.pot > 0 ? '팟 ' + S.pot : '팟 —';
+
+    const turnLabel = document.getElementById('turnLabel');
+    if (S.active && S.turn >= 0 && !S.showdown){
+      const seat = S.seats[S.turn];
+      const ord = S.street === 'preflop' ? seat.preflopOrder : seat.postflopOrder;
+      turnLabel.textContent = '차례: ' + seat.pos + ' (' + ord + '번째)';
+      turnLabel.style.display = 'block';
+    } else if (S.showdown){
+      turnLabel.textContent = '쇼다운';
+      turnLabel.style.display = 'block';
+    } else {
+      turnLabel.style.display = 'none';
+    }
+
+    const result = document.getElementById('result');
+    if (S.result){
+      result.textContent = S.result;
+      result.style.display = 'block';
+    } else {
+      result.style.display = 'none';
+    }
+  }
+
+  function startingHand(cards){
+    const sorted = cards.slice().sort(function(a,b){ return b.r - a.r; });
+    const a = sorted[0], b = sorted[1];
+    if (!a || !b) return '-';
+    if (a.r === b.r) return RANK_NOTATION[a.r] + RANK_NOTATION[b.r];
+    return RANK_NOTATION[a.r] + RANK_NOTATION[b.r] + (a.s === b.s ? 's' : 'o');
+  }
+
+  function betRange(){
+    const hero = heroSeat();
+    const max = hero.committed + hero.stack;
+    let min = S.currentBet + S.minRaise;
+    if (min > max) min = max;
+    if (min < 1) min = 1;
+    return { min: min, max: Math.max(min, max) };
+  }
+
+  function renderPanel(){
+    const hero = heroSeat();
+    if (!hero) return;
+
+    // 내 포지션 + 순서
+    if (hero.eliminated){
+      document.getElementById('heroPosLabel').textContent = '탈락';
+    } else {
+      document.getElementById('heroPosLabel').textContent =
+        hero.pos + ' · ' + (POS_KO[hero.pos] || '') +
+        ' · 프리플롭 ' + hero.preflopOrder + '번째 / 플롭 이후 ' + hero.postflopOrder + '번째';
+    }
+
+    // 내 카드
+    const hc = document.getElementById('heroCards');
+    hc.innerHTML = '';
+    hero.cards.forEach(function(c){ hc.appendChild(cardEl(c)); });
+
+    // 핸드 이름
+    let handText = '-';
+    if (!hero.eliminated && hero.cards.length === 2){
+      if (S.board.length >= 3) handText = describeRank(rank7(hero.cards.concat(S.board)));
+      else handText = '프리플롭 · ' + startingHand(hero.cards);
+    }
+    document.getElementById('handName').textContent = handText;
+
+    // 승률
+    const oppCount = S.seats.filter(function(s){
+      return !s.eliminated && !s.isHero && !s.folded;
+    }).length;
+    document.getElementById('equityLabel').textContent =
+      oppCount > 0 ? '승률 (상대 ' + oppCount + '명)' : '승률';
+
+    let eq = 0;
+    let eqText = '—';
+    if (!hero.eliminated && !hero.folded && hero.cards.length === 2){
+      if (S.showdown){
+        const he = rank7(hero.cards.concat(S.board));
+        let beaten = false, tied = false;
+        S.seats.forEach(function(s){
+          if (s.eliminated || s.folded || s.isHero) return;
+          const c = compareRanks(he, rank7(s.cards.concat(S.board)));
+          if (c < 0) beaten = true;
+          if (c === 0) tied = true;
+        });
+        eq = beaten ? 0 : (tied ? 0.5 : 1);
+      } else {
+        eq = getEquity();
+      }
+      eqText = (eq * 100).toFixed(1) + '%';
+    }
+
+    document.getElementById('equityBar').style.width = (eq * 100).toFixed(1) + '%';
+    document.getElementById('equityText').textContent = eqText;
+
+    // 팟 오즈
+    const need = Math.max(0, S.currentBet - hero.committed);
+    const odds = document.getElementById('oddsText');
+    if (hero.eliminated){
+      odds.textContent = '탈락 · 좌석이 비었습니다';
+    } else if (S.active){
+      if (need > 0){
+        const payable = Math.min(need, hero.stack);
+        odds.textContent = '콜 ' + payable + ' · 팟 ' + S.pot +
+          ' · 필요 승률 ' + ((need / (S.pot + need)) * 100).toFixed(1) + '%';
+      } else {
+        odds.textContent = '체크 가능 · 팟 ' + S.pot;
+      }
+    } else {
+      odds.textContent = '핸드 종료';
+    }
+
+    // 추천 액션 + 타이밍 해석
+    const rec = buildRecommendation();
+    const adviceAction = document.getElementById('adviceAction');
+    const adviceReason = document.getElementById('adviceReason');
+    const adviceTiming = document.getElementById('adviceTiming');
+    const adviceMeta = document.getElementById('adviceMeta');
+
+    if (rec){
+      const actionLabel = actLabel(rec.action, rec.toCall);
+      adviceAction.textContent = actionLabel;
+      adviceAction.className = 'adviceBadge ' + rec.action;
+
+      document.getElementById('spotMain').textContent =
+        '추천: ' + actionLabel +
+        ' · 승률 ' + rec.equityPct + '%' +
+        ' · 보정 ' + rec.adjustedEquityPct + '%' +
+        ' · 필요 ' + rec.potOddsPct + '%';
+
+      document.getElementById('spotStrength').textContent =
+        '강도: ' + buildStrengthLine(rec);
+
+      adviceReason.textContent = rec.reasonText;
+      adviceTiming.textContent = rec.timingText;
+      adviceMeta.innerHTML =
+        '승률 ' + (rec.equity * 100).toFixed(1) + '%' +
+        ' · 포지션 보정 ' + (rec.adjustedEquity * 100).toFixed(1) + '%' +
+        ' · 포지션 ' + Math.round(rec.positionScore * 100) + '%' +
+        ' · 팟 오즈 ' + (rec.potOdds * 100).toFixed(1) + '%' +
+        (rec.toCall > 0 ? ' (' + rec.toCall + ' ÷ (' + rec.pot + '+' + rec.toCall + '))' : '') +
+        '<br><span class="adviceCode">' + rec.reasonCode + '</span>';
+    } else {
+      adviceAction.textContent = '-';
+      adviceAction.className = 'adviceBadge';
+      document.getElementById('spotMain').textContent = '-';
+      document.getElementById('spotStrength').textContent = '-';
+      adviceReason.textContent = hero.eliminated
+        ? '탈락했습니다.'
+        : (hero.folded ? '이번 핸드는 폴드했습니다.' : '추천할 수 있는 상황이 아닙니다.');
+      adviceTiming.textContent = '';
+      adviceMeta.textContent = '';
+    }
+
+    // 승부 포인트 체크리스트
+    const gList = document.getElementById('gambleList');
+    const gTip = document.getElementById('gambleTip');
+    gList.innerHTML = '';
+    if (rec && rec.gamble){
+      if (rec.isGamble){
+        adviceAction.textContent = actLabel(rec.action, rec.toCall) + ' · 승부!';
+      } else {
+        adviceAction.textContent = actLabel(rec.action, rec.toCall);
+      }
+      rec.gamble.spots.forEach(function(sp){
+        const li = document.createElement('li');
+        li.className = sp.ok ? 'ok' : (sp.na ? 'na' : '');
+        if (sp.key === rec.gambleUsed) li.className += ' used';
+        const ic = document.createElement('span');
+        ic.className = 'gIcon';
+        ic.textContent = sp.ok ? '✓' : (sp.na ? '–' : '✗');
+        const body = document.createElement('div');
+        const t = document.createElement('div');
+        t.className = 'gTitle'; t.textContent = sp.title;
+        const d = document.createElement('div');
+        d.className = 'gDetail'; d.textContent = sp.detail;
+        body.appendChild(t); body.appendChild(d);
+        li.appendChild(ic); li.appendChild(body);
+        gList.appendChild(li);
+      });
+      gTip.innerHTML = gambleConclusion(rec).tipHtml;
+    } else {
+      gTip.textContent = '내 차례가 되면 확률이 낮아도 걸 만한 조건을 체크해 드려요.';
+    }
+
+    // 쉬운 설명 (유치원생 눈높이)
+    const easyText = document.getElementById('easyText');
+    if (rec){
+      easyText.textContent = buildEasyExplanation(rec);
+    } else {
+      easyText.textContent = hero.eliminated
+        ? '너는 탈락했어. 이제 친구들이 노는 걸 구경하자.'
+        : (hero.folded ? '이번엔 폴드했어. 다음 놀이를 기다리자.' : '지금은 설명할 차례가 아니야.');
+    }
+
+    // 버튼
+    const myTurn = isHeroTurn();
+    const btnFold = document.getElementById('btnFold');
+    const btnCall = document.getElementById('btnCall');
+    const btnRaise = document.getElementById('btnRaise');
+    const slider = document.getElementById('amount');
+
+    btnFold.disabled = !myTurn;
+    btnCall.disabled = !myTurn;
+
+    btnCall.textContent = need > 0 ? '콜 ' + Math.min(need, hero.stack) : '체크';
+    btnRaise.textContent = S.currentBet > 0 ? '레이즈' : '벳';
+
+    const range = betRange();
+    slider.min = range.min;
+    slider.max = range.max;
+    slider.step = 1;
+    slider.disabled = !myTurn;
+
+    let val = parseInt(slider.value, 10);
+    if (isNaN(val) || val < range.min) val = range.min;
+    if (val > range.max) val = range.max;
+    slider.value = val;
+
+    btnRaise.disabled = !myTurn || range.max <= S.currentBet;
+
+    updateAmountLabel();
+
+    // 로그
+    const list = document.getElementById('log');
+    list.innerHTML = '';
+    S.log.slice(0, 12).forEach(function(msg){
+      const li = document.createElement('li');
+      li.textContent = msg;
+      list.appendChild(li);
+    });
+  }
+
+  function renderPositionGuide(){
+    const wrap = document.getElementById('posTableWrap');
+    if (!wrap) return;
+
+    const active = S.seats
+      .filter(function(s){ return !s.eliminated; })
+      .sort(function(a,b){ return a.seat - b.seat; });
+
+    if (!active.length){
+      wrap.innerHTML = '<p class="why">게임이 끝났습니다.</p>';
+      return;
+    }
+
+    // 우승자가 정해진 경우 표 대신 결과 문구
+    if (active.length < 2){
+      wrap.innerHTML = '<p class="why">게임 종료 · 우승: <b>' +
+        active[0].pos + '</b> (' + active[0].stack + '칩)</p>';
+      return;
+    }
+
+    let html = '<table class="posTable"><thead><tr>' +
+      '<th>포지션</th><th>뜻</th><th>프리플롭</th><th>플롭 이후</th><th>칩</th>' +
+      '</tr></thead><tbody>';
+
+    active.forEach(function(seat){
+      html += '<tr' + (seat.isHero ? ' class="hero"' : '') + '>' +
+        '<td><b>' + seat.pos + '</b>' +
+          (seat.isButton ? ' <span class="btnChip">D</span>' : '') + '</td>' +
+        '<td class="ko">' + (POS_KO[seat.pos] || '') +
+          '<br><span class="en">' + (POS_EN[seat.pos] || '') + '</span></td>' +
+        '<td class="num">' + seat.preflopOrder + '번째</td>' +
+        '<td class="num">' + seat.postflopOrder + '번째</td>' +
+        '<td class="chips">' + seat.stack + '</td>' +
+        '</tr>';
+    });
+
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+  }
+
+  function renderOverlay(){
+    const overlay = document.getElementById('overlay');
+    if (!S.showOverlay || !S.gameOver){
+      overlay.classList.remove('show');
+      return;
+    }
+
+    const winner = S.winnerSeat >= 0 ? S.seats[S.winnerSeat] : null;
+    document.getElementById('overlayTitle').textContent =
+      winner ? winner.pos + ' 포지션 승리!' : '무승부';
+
+    let sub = winner
+      ? '최종 스택 ' + winner.stack + '칩 · ' + S.handNo + '핸드 진행'
+      : '남은 플레이어가 없습니다.';
+    if (winner && S.lastResult){
+      sub += '\n마지막 승리: ' + S.lastResult.reason +
+        ' · +' + S.lastResult.amount + '칩';
+    }
+    document.getElementById('overlaySub').textContent = sub;
+    overlay.classList.add('show');
+  }
+
+  function updateAmountLabel(){
+    const val = parseInt(document.getElementById('amount').value, 10);
+    const prefix = S.currentBet > 0 ? '레이즈 ' : '벳 ';
+    document.getElementById('amountLabel').textContent = prefix + val;
+  }
+
+  function resetBetSize(){
+    const slider = document.getElementById('amount');
+    const range = betRange();
+    slider.min = range.min;
+    slider.max = range.max;
+
+    let v;
+    if (S.currentBet === 0){
+      const bb = getBlinds().bb;
+      v = Math.max(range.min, Math.round(S.pot * 0.6));
+      if (v < bb) v = bb;
+    } else {
+      v = range.min;
+    }
+
+    v = Math.max(range.min, Math.min(range.max, v));
+    slider.value = v;
+    updateAmountLabel();
+  }
+
+  /* ============================================================
+     11. 포지션 드롭다운 / 이벤트
+     ============================================================ */
+  function rebuildHeroOptions(){
+    const n = parseInt(document.getElementById('playerCount').value, 10);
+    const sel = document.getElementById('heroPos');
+    const prev = sel.value;
+
+    sel.innerHTML = '';
+    POSITIONS[n].forEach(function(p){
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p + ' · ' + (POS_KO[p] || '');
+      sel.appendChild(opt);
+    });
+
+    const exists = Array.prototype.some.call(sel.options, function(o){
+      return o.value === prev;
+    });
+    sel.value = exists ? prev : POSITIONS[n][POSITIONS[n].length - 1];
+  }
+
+  document.getElementById('btnNew').addEventListener('click', newGame);
+  document.getElementById('btnRestart').addEventListener('click', newGame);
+  document.getElementById('btnFold').addEventListener('click', doFold);
+  document.getElementById('btnCall').addEventListener('click', doCallCheck);
+  document.getElementById('btnRaise').addEventListener('click', doRaise);
+  document.getElementById('amount').addEventListener('input', updateAmountLabel);
+
+  // 결과 화면에서 다음 핸드 / 최종 결과 보기
+  document.getElementById('toastNext').addEventListener('click', function(){
+    const el = document.getElementById('handToast');
+    if (!el.classList.contains('show')) return;
+    el.classList.remove('show');
+
+    if (S.gameOver){
+      S.showOverlay = true;
+      render();
+    } else {
+      newHand();
+    }
+  });
+
+  document.getElementById('playerCount').addEventListener('change', function(){
+    rebuildHeroOptions();
+    newGame();
+  });
+
+  document.getElementById('heroPos').addEventListener('change', newGame);
+
+  // 콘솔에서 직접 써볼 수 있도록 엔진 노출
+  window.PokerEngine = {
+    rank5: rank5,
+    rank7: rank7,
+    compareRanks: compareRanks,
+    describeRank: describeRank,
+    calcPositions: calcPositions,
+    classifyPreflop: classifyPreflop,
+    decideAction: decideAction,
+    recommend: buildRecommendation,
+    explanations: EXPLANATIONS,
+    buildEasyExplanation: buildEasyExplanation,
+    runEngineTests: runEngineTests,
+    getState: function(){ return S; }
+  };
+
+  runEngineTests();
+
+  rebuildHeroOptions();
+  newGame();
+})();
+</script>
+</body>
+</html>
