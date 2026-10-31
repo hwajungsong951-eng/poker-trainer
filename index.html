@@ -348,6 +348,26 @@
   }
   .dragHint{display:none}
 
+  /* 상대 레인지 추정 */
+  .rangeBox{
+    border:1px solid rgba(79,163,255,.28);
+    background:linear-gradient(180deg,rgba(79,163,255,.07),rgba(79,163,255,.02));
+    border-radius:14px;padding:12px 14px;
+  }
+  .rangeList{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+  .rangeRow{border-top:1px dashed rgba(255,255,255,.09);padding-top:6px}
+  .rangeRow:first-child{border-top:0;padding-top:0}
+  .rangeHead{
+    display:flex;justify-content:space-between;gap:8px;
+    font-size:11px;color:#9fb0c3;line-height:1.45;
+  }
+  .rangeHead b{color:#cfe0f0;font-size:12px}
+  .rangeSub{font-size:10.5px;color:#9fb0c3;margin-top:2px;line-height:1.45}
+  .rangeTop{font-size:11px;color:#bfe3ff;margin-top:2px;line-height:1.45}
+  .rangeNote{font-size:10px;color:#7f93a9;margin-top:7px;line-height:1.55}
+  .rangeLegend{color:#6f8299}
+  .rangeEmpty{font-size:11px;color:#7f93a9}
+
   /* 강도 해석 */
   .strengthBox{
     border:1px solid rgba(111,227,161,.25);
@@ -631,13 +651,14 @@
       overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
       touch-action:pan-y;scrollbar-width:thin;
     }
-    /* 모바일 순서: 내 정보 → 쉬운 설명 → 승부 포인트(드래그) */
+    /* 모바일 순서: 내 정보 → 쉬운 설명 → 상대 카드 예상(드래그) → 승부 포인트 */
     .panel > div:first-child{order:0}
     .easyBox{order:1}
-    .dragHint{order:2}
-    .advice{order:3}
-    .feedback{order:4}
-    .handSummary{order:5}
+    .rangeBox{order:2}
+    .dragHint{order:3}
+    .advice{order:4}
+    .feedback{order:5}
+    .handSummary{order:6}
     .panel .label{font-size:9px}
     .heroCards{min-height:0;gap:4px;margin-top:2px}
     .heroCards .card{width:26px;height:36px;border-radius:4px}
@@ -660,6 +681,14 @@
     .easyBox{padding:7px 9px;border-radius:9px}
     .easyTitle{font-size:8.5px}
     .easyText{font-size:10.5px;line-height:1.5;margin-top:3px}
+    .rangeBox{padding:7px 9px;border-radius:9px}
+    .rangeList{gap:4px;margin-top:4px}
+    .rangeRow{padding-top:4px}
+    .rangeHead{font-size:8.5px}
+    .rangeHead b{font-size:9.5px}
+    .rangeSub{font-size:8.5px}
+    .rangeTop{font-size:9px}
+    .rangeNote{font-size:8px;margin-top:4px}
     .dragHint{display:block;font-size:9px;color:#7f93a9;text-align:center;padding:1px 0}
 
     .feedback{padding:7px 9px}
@@ -800,6 +829,19 @@
     <div class="easyBox">
       <div class="easyTitle">쉬운 설명</div>
       <div class="easyText" id="easyText">-</div>
+    </div>
+
+    <!-- 상대 레인지 추정 -->
+    <div class="rangeBox">
+      <div class="label">상대 카드 예상 · 행동으로 추측</div>
+      <div id="rangeList" class="rangeList"></div>
+      <div class="rangeNote">
+        상대 카드를 본 게 아니라, 상대가 한 <b>행동(폴드/콜/레이즈)</b>을 보고 맞히는 거야.
+        <b>레이즈</b>하면 좋은 카드일 확률이 올라가고, <b>콜</b>하면 중간, <b>폴드</b>하면 사라져.<br>
+        10%는 10번 중 1번, 1%는 100번 중 1번, 50%는 반반이야.<br>
+        <span class="rangeLegend">AKs = A와 K가 같은 무늬 · 99 = 9 두 장</span><br>
+        카드 한 종류는 보통 1~3%야. 그래서 <b>좋은 패 전체 확률</b>을 보는 게 더 중요해.
+      </div>
     </div>
 
     <div class="dragHint">설명은 위아래로 드래그해서 볼 수 있어요</div>
@@ -1974,6 +2016,154 @@
   }
 
   /* ============================================================
+     5-4. 상대 레인지 추정 (공개 액션 기반)
+     - 상대의 실제 카드는 사용하지 않는다.
+     - 히어로 카드 + 보드 + 상대의 공개 액션만 사용.
+     ============================================================ */
+  function comboNotation(combo){
+    const a = combo[0], b = combo[1];
+    if (a.r === b.r) return RANK_NOTATION[a.r] + RANK_NOTATION[b.r];
+    const hi = a.r >= b.r ? a : b;
+    const lo = a.r >= b.r ? b : a;
+    return RANK_NOTATION[hi.r] + RANK_NOTATION[lo.r] + (hi.s === lo.s ? 's' : 'o');
+  }
+
+  function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+
+  function actionLikelihood(act, strength, draw){
+    const s = Math.max(0, Math.min(1, strength + (draw >= 8 ? 0.06 : 0)));
+    if (act.action === 'fold') return 1 - sigmoid((s - 0.42) * 9);
+    if (act.action === 'call'){
+      if (act.toCall > 0){
+        const potOdds = act.toCall / (act.pot + act.toCall);
+        return 0.02 + 0.98 * sigmoid((s - potOdds - 0.02) * 12);
+      }
+      return 0.10 + 0.90 * Math.exp(-Math.pow(s - 0.45, 2) / 0.10);
+    }
+    if (act.action === 'raise'){
+      return 0.02 + 0.98 * sigmoid((s - 0.62) * 10);
+    }
+    return 1;
+  }
+
+  // 드로우 아웃츠만 빠르게 계산 (range 추정용)
+  function drawOuts(combo, board){
+    if (board.length < 3) return 0;
+    const all = combo.concat(board);
+    const suits = [0, 0, 0, 0];
+    all.forEach(function(c){ suits[c.s]++; });
+    const maxSuit = Math.max.apply(null, suits);
+    if (maxSuit >= 5) return 0;
+    if (maxSuit === 4) return 9;
+
+    const rs = {};
+    all.forEach(function(c){ rs[c.r] = true; });
+    if (rs[14]) rs[1] = true;
+
+    // 이미 스트레이트
+    for (let r = 1; r <= 10; r++){
+      let ok = true;
+      for (let k = 0; k < 5; k++) if (!rs[r+k]){ ok = false; break; }
+      if (ok) return 0;
+    }
+    // 오픈엔드
+    for (let r = 1; r <= 10; r++){
+      let ok = true;
+      for (let k = 0; k < 4; k++) if (!rs[r+k]){ ok = false; break; }
+      if (ok) return 8;
+    }
+    // 갯수
+    for (let r = 1; r <= 10; r++){
+      let cnt = 0;
+      for (let k = 0; k < 5; k++) if (rs[r+k]) cnt++;
+      if (cnt === 4) return 4;
+    }
+    return 0;
+  }
+
+  function estimateOpponentRange(seat){
+    const key = S.token + ':' + seat.seat + ':' + seat.actions.length + ':' + S.board.length;
+    if (seat._rangeKey === key) return seat._range;
+
+    const hero = heroSeat();
+    const known = (hero ? hero.cards : []).concat(S.board);
+    const deck = makeDeck().filter(function(c){
+      return !known.some(function(k){ return k.r === c.r && k.s === c.s; });
+    });
+
+    const isPreflop = S.board.length < 3;
+    const actions = seat.actions || [];
+    const table = [0.12, 0.33, 0.55, 0.72, 0.82, 0.88, 0.94, 0.98, 1.0];
+    const byNotation = {};
+    let total = 0;
+    let strong = 0, medium = 0, weak = 0, made = 0, draw = 0, air = 0;
+
+    for (let i = 0; i < deck.length; i++){
+      for (let j = i + 1; j < deck.length; j++){
+        const combo = [deck[i], deck[j]];
+        let strength = 0, cat = -1, outs = 0;
+
+        if (isPreflop){
+          strength = preflopStrength(combo);
+        } else {
+          const ev = rank7(combo.concat(S.board));
+          cat = ev.category;
+          strength = table[cat];
+          outs = drawOuts(combo, S.board);
+          if (outs >= 8 && cat < 3) strength = Math.min(1, strength + 0.10);
+        }
+
+        let w = actions.length ? (0.5 + strength) : 1;
+        for (let a = 0; a < actions.length; a++){
+          const act = actions[a];
+          const s = act.street === 'preflop' ? preflopStrength(combo) : strength;
+          w *= actionLikelihood(act, s, act.street === 'preflop' ? 0 : outs);
+          if (w < 1e-9) break;
+        }
+        if (w <= 0) continue;
+
+        total += w;
+
+        if (isPreflop){
+          if (strength >= 0.7) strong += w;
+          else if (strength >= 0.45) medium += w;
+          else weak += w;
+        } else {
+          if (cat >= 1) made += w;
+          else if (outs >= 8) draw += w;
+          else air += w;
+        }
+
+        const notation = comboNotation(combo);
+        byNotation[notation] = (byNotation[notation] || 0) + w;
+      }
+    }
+
+    const pct = function(v){ return Math.round((v / (total || 1)) * 1000) / 10; };
+    const top = Object.keys(byNotation)
+      .map(function(k){ return { notation: k, pct: pct(byNotation[k]) }; })
+      .sort(function(a, b){ return b.pct - a.pct; })
+      .slice(0, 3);
+
+    const result = {
+      street: isPreflop ? 'preflop' : S.street,
+      hasActions: actions.length > 0,
+      top: top,
+      strongPct: pct(strong),
+      mediumPct: pct(medium),
+      weakPct: pct(weak),
+      madePct: pct(made),
+      drawPct: pct(draw),
+      airPct: pct(air),
+      combos: deck.length * (deck.length - 1) / 2
+    };
+
+    seat._rangeKey = key;
+    seat._range = result;
+    return result;
+  }
+
+  /* ============================================================
      5-3. 학습 피드백 (추천 vs 내 선택 / 핸드 요약)
      ============================================================ */
   function recordHeroDecision(action, label){
@@ -2171,6 +2361,7 @@
         eliminated: false,
         committed: 0,
         acted: false,
+        actions: [],
         isHero: i === S.heroSeat
       });
     }
@@ -2217,6 +2408,7 @@
       s.allIn = false;
       s.committed = 0;
       s.acted = false;
+      s.actions = [];
       if (!s.eliminated){
         s.cards = [S.deck.pop(), S.deck.pop()];
       }
@@ -2479,7 +2671,7 @@
     const a = s[0], b = s[1];
     let v;
     if (a.r === b.r){
-      v = 0.5 + (a.r - 2) / 24 * 0.45;
+      v = 0.5 + (a.r - 2) / 12 * 0.45;
     } else {
       v = (a.r + b.r) / 28 * 0.55;
       if (a.s === b.s) v += 0.06;
@@ -2551,6 +2743,8 @@
      ============================================================ */
   function actFold(idx){
     const seat = S.seats[idx];
+    if (!seat.actions) seat.actions = [];
+    seat.actions.push({ street: S.street, action: 'fold', toCall: Math.max(0, S.currentBet - seat.committed), pot: S.pot });
     seat.folded = true;
     seat.acted = true;
     log(seat.pos + ' 폴드');
@@ -2560,6 +2754,8 @@
   function actCall(idx){
     const seat = S.seats[idx];
     const need = Math.max(0, S.currentBet - seat.committed);
+    if (!seat.actions) seat.actions = [];
+    seat.actions.push({ street: S.street, action: 'call', toCall: need, check: need === 0, pot: S.pot });
     if (need > 0){
       const paid = pay(seat, need);
       log(seat.pos + ' 콜 ' + paid);
@@ -2580,6 +2776,9 @@
       actCall(idx);
       return;
     }
+
+    if (!seat.actions) seat.actions = [];
+    seat.actions.push({ street: S.street, action: 'raise', raiseTo: raiseTo, pot: S.pot });
 
     pay(seat, raiseTo - seat.committed);
     S.currentBet = raiseTo;
@@ -2666,12 +2865,107 @@
       S.lastHandSummary || '아직 끝난 핸드가 없어요.';
   }
 
+  function simpleOdds(pct){
+    if (pct >= 10) return '10번 중 ' + Math.max(1, Math.round(pct / 10)) + '번';
+    return '100번 중 ' + Math.max(1, Math.round(pct)) + '번';
+  }
+
+  function renderRanges(){
+    const wrap = document.getElementById('rangeList');
+    if (!wrap) return;
+
+    const opps = S.seats.filter(function(s){
+      return !s.eliminated && !s.isHero && !s.folded;
+    });
+
+    wrap.innerHTML = '';
+    if (!opps.length){
+      const empty = document.createElement('div');
+      empty.className = 'rangeEmpty';
+      empty.textContent = '지금은 상대가 없어요.';
+      wrap.appendChild(empty);
+      return;
+    }
+
+    const anyActions = opps.some(function(s){
+      return (s.actions || []).length > 0;
+    });
+    if (!anyActions){
+      const empty = document.createElement('div');
+      empty.className = 'rangeEmpty';
+      empty.textContent = '아직 아무도 행동하지 않았어. 상대가 콜/레이즈하면 예상이 여기에 나와.';
+      wrap.appendChild(empty);
+      return;
+    }
+
+    opps.forEach(function(seat){
+      const row = document.createElement('div');
+      row.className = 'rangeRow';
+
+      const head = document.createElement('div');
+      head.className = 'rangeHead';
+
+      const pos = document.createElement('b');
+      pos.textContent = seat.pos;
+
+      const sum = document.createElement('span');
+
+      // 아직 행동하지 않은 상대
+      if (!seat.actions || !seat.actions.length){
+        sum.textContent = '아직 행동 전';
+        head.appendChild(pos);
+        head.appendChild(sum);
+
+        const sub = document.createElement('div');
+        sub.className = 'rangeSub';
+        sub.textContent = '카드가 모두 똑같이 가능해.';
+
+        row.appendChild(head);
+        row.appendChild(sub);
+        wrap.appendChild(row);
+        return;
+      }
+
+      const r = estimateOpponentRange(seat);
+
+      if (r.street === 'preflop'){
+        sum.textContent = '좋은 패 ' + r.strongPct + '% (' + simpleOdds(r.strongPct) + ')';
+      } else {
+        sum.textContent = '이미 맞은 패 ' + r.madePct + '% (' + simpleOdds(r.madePct) + ')';
+      }
+
+      head.appendChild(pos);
+      head.appendChild(sum);
+
+      const sub = document.createElement('div');
+      sub.className = 'rangeSub';
+      if (r.street === 'preflop'){
+        sub.textContent = '보통 패 ' + r.mediumPct + '% · 약한 패 ' + r.weakPct + '%';
+      } else {
+        sub.textContent = '한 장 더 맞으면 좋아짐 ' + r.drawPct +
+          '% · 아직 약함 ' + r.airPct + '%';
+      }
+
+      const top = document.createElement('div');
+      top.className = 'rangeTop';
+      top.textContent = '자주 나오는 카드: ' + r.top.map(function(x){
+        return x.notation + ' ' + x.pct + '%';
+      }).join(' · ');
+
+      row.appendChild(head);
+      row.appendChild(sub);
+      row.appendChild(top);
+      wrap.appendChild(row);
+    });
+  }
+
   function render(){
     renderSeats();
     renderBoard();
     renderCenter();
     renderPanel();
     renderStudyFeedback();
+    renderRanges();
     renderPositionGuide();
     renderOverlay();
   }
@@ -3202,6 +3496,7 @@
     classifyPreflop: classifyPreflop,
     decideAction: decideAction,
     recommend: buildRecommendation,
+    estimateRange: estimateOpponentRange,
     explanations: EXPLANATIONS,
     buildEasyExplanation: buildEasyExplanation,
     runEngineTests: runEngineTests,
