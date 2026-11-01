@@ -170,7 +170,13 @@
     transition:border-color .15s, box-shadow .15s;
   }
   .posWrap{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+  .posRow{display:flex;align-items:baseline;gap:3px;min-width:0}
   .pos{font-size:12px;font-weight:800;color:#cfe0f0}
+  .actSmall{font-size:8px;font-weight:800;line-height:1;white-space:nowrap}
+  .actSmall.call{color:#bfe3ff}
+  .actSmall.raise{color:var(--gold-soft)}
+  .actSmall.fold{color:#ffb4b4}
+  .actSmall.check{color:#9fb0c3}
   .posKo{font-size:8px;color:#8fa1b6;white-space:nowrap;margin-top:1px}
   .stack{font-size:12px;color:var(--muted)}
   .seat.hero .plate{
@@ -219,6 +225,25 @@
     font-size:9px;font-weight:800;color:#0b0f14;background:#ffb4b4;
     padding:1px 6px;border-radius:999px;
   }
+
+  /* 최근 액션 말풍선 (2초) */
+  .actionBubble{
+    position:absolute;left:50%;top:-34px;transform:translate(-50%,4px);
+    padding:4px 10px;border-radius:10px;font-size:11px;font-weight:800;
+    background:#0d141d;border:1px solid #33445a;color:#fff;
+    opacity:0;transition:opacity .15s, transform .15s;
+    pointer-events:none;z-index:12;white-space:nowrap;
+    box-shadow:0 6px 16px rgba(0,0,0,.45);
+  }
+  .actionBubble.show{opacity:1;transform:translate(-50%,0)}
+  .actionBubble::after{
+    content:"";position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);
+    border:6px solid transparent;border-top-color:#0d141d;
+  }
+  .actionBubble.call{border-color:#1f4a6b;color:#bfe3ff}
+  .actionBubble.raise{border-color:var(--gold);color:var(--gold-soft)}
+  .actionBubble.fold{border-color:#4a2630;color:#ffb4b4}
+  .actionBubble.check{border-color:#33445a;color:#cfe0f0}
 
   /* 빈 자리 */
   .seat.empty{opacity:.35;pointer-events:none}
@@ -628,6 +653,8 @@
     .plate{min-width:62px;padding:2px 4px;gap:3px;border-radius:7px}
     .pos{font-size:8.5px}
     .posKo{display:none}
+    .actSmall{font-size:6.5px}
+    .actionBubble{top:-28px;font-size:9.5px;padding:3px 8px;border-radius:8px}
     .stack{font-size:8.5px}
     .dealer{width:14px;height:14px;font-size:7px;top:-4px;right:-4px}
     .blind{font-size:6.5px;padding:0 3px;bottom:-7px}
@@ -2362,6 +2389,9 @@
         committed: 0,
         acted: false,
         actions: [],
+        lastActionText: '',
+        lastActionKind: '',
+        lastActionAt: 0,
         isHero: i === S.heroSeat
       });
     }
@@ -2409,6 +2439,9 @@
       s.committed = 0;
       s.acted = false;
       s.actions = [];
+      s.lastActionText = '';
+      s.lastActionKind = '';
+      s.lastActionAt = 0;
       if (!s.eliminated){
         s.cards = [S.deck.pop(), S.deck.pop()];
       }
@@ -2741,10 +2774,23 @@
   /* ============================================================
      8. 액션
      ============================================================ */
+  function markAction(seat, label, kind){
+    seat.lastActionText = label;
+    seat.lastActionKind = kind;
+    seat.lastActionAt = Date.now();
+
+    if (seat._actionTimer) clearTimeout(seat._actionTimer);
+    const token = S.token;
+    seat._actionTimer = setTimeout(function(){
+      if (token === S.token) render();
+    }, 2100);
+  }
+
   function actFold(idx){
     const seat = S.seats[idx];
     if (!seat.actions) seat.actions = [];
     seat.actions.push({ street: S.street, action: 'fold', toCall: Math.max(0, S.currentBet - seat.committed), pot: S.pot });
+    markAction(seat, '폴드', 'fold');
     seat.folded = true;
     seat.acted = true;
     log(seat.pos + ' 폴드');
@@ -2756,6 +2802,7 @@
     const need = Math.max(0, S.currentBet - seat.committed);
     if (!seat.actions) seat.actions = [];
     seat.actions.push({ street: S.street, action: 'call', toCall: need, check: need === 0, pot: S.pot });
+    markAction(seat, need > 0 ? '콜' : '체크', need > 0 ? 'call' : 'check');
     if (need > 0){
       const paid = pay(seat, need);
       log(seat.pos + ' 콜 ' + paid);
@@ -2779,6 +2826,8 @@
 
     if (!seat.actions) seat.actions = [];
     seat.actions.push({ street: S.street, action: 'raise', raiseTo: raiseTo, pot: S.pot });
+    const raiseLabel = prev === 0 ? '벳' : '레이즈';
+    markAction(seat, raiseLabel, 'raise');
 
     pay(seat, raiseTo - seat.committed);
     S.currentBet = raiseTo;
@@ -2791,7 +2840,7 @@
       if (j !== idx && !s.eliminated && !s.folded && !s.allIn) s.acted = false;
     });
 
-    log(seat.pos + ' 레이즈 ' + raiseTo);
+    log(seat.pos + ' ' + raiseLabel + ' ' + raiseTo);
     afterAction(idx);
   }
 
@@ -3027,15 +3076,26 @@
       const posWrap = document.createElement('div');
       posWrap.className = 'posWrap';
 
+      const posRow = document.createElement('div');
+      posRow.className = 'posRow';
+
       const pos = document.createElement('span');
       pos.className = 'pos';
       pos.textContent = seat.pos + (seat.isHero ? ' (나)' : '');
+      posRow.appendChild(pos);
+
+      if (seat.lastActionText){
+        const act = document.createElement('span');
+        act.className = 'actSmall ' + (seat.lastActionKind || '');
+        act.textContent = seat.lastActionText;
+        posRow.appendChild(act);
+      }
 
       const posKo = document.createElement('span');
       posKo.className = 'posKo';
       posKo.textContent = POS_KO[seat.pos] || '';
 
-      posWrap.appendChild(pos);
+      posWrap.appendChild(posRow);
       posWrap.appendChild(posKo);
 
       const stack = document.createElement('span');
@@ -3045,6 +3105,15 @@
       plate.appendChild(posWrap);
       plate.appendChild(stack);
       el.appendChild(plate);
+
+      // 2초 말풍선 (최근 액션)
+      if (seat.lastActionAt && seat.lastActionText &&
+          (Date.now() - seat.lastActionAt) < 2000){
+        const bubble = document.createElement('span');
+        bubble.className = 'actionBubble show ' + (seat.lastActionKind || '');
+        bubble.textContent = seat.lastActionText;
+        el.appendChild(bubble);
+      }
 
       // 버튼(D) 표시 — 매 핸드 시계방향으로 이동
       if (seat.isButton){
