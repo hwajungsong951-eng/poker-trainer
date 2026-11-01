@@ -226,25 +226,6 @@
     padding:1px 6px;border-radius:999px;
   }
 
-  /* 최근 액션 말풍선 (2초) */
-  .actionBubble{
-    position:absolute;left:50%;top:-34px;transform:translate(-50%,4px);
-    padding:4px 10px;border-radius:10px;font-size:11px;font-weight:800;
-    background:#0d141d;border:1px solid #33445a;color:#fff;
-    opacity:0;transition:opacity .15s, transform .15s;
-    pointer-events:none;z-index:12;white-space:nowrap;
-    box-shadow:0 6px 16px rgba(0,0,0,.45);
-  }
-  .actionBubble.show{opacity:1;transform:translate(-50%,0)}
-  .actionBubble::after{
-    content:"";position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);
-    border:6px solid transparent;border-top-color:#0d141d;
-  }
-  .actionBubble.call{border-color:#1f4a6b;color:#bfe3ff}
-  .actionBubble.raise{border-color:var(--gold);color:var(--gold-soft)}
-  .actionBubble.fold{border-color:#4a2630;color:#ffb4b4}
-  .actionBubble.check{border-color:#33445a;color:#cfe0f0}
-
   /* 빈 자리 */
   .seat.empty{opacity:.35;pointer-events:none}
   .emptyPlate{
@@ -654,7 +635,6 @@
     .pos{font-size:8.5px}
     .posKo{display:none}
     .actSmall{font-size:6.5px}
-    .actionBubble{top:-28px;font-size:9.5px;padding:3px 8px;border-radius:8px}
     .stack{font-size:8.5px}
     .dealer{width:14px;height:14px;font-size:7px;top:-4px;right:-4px}
     .blind{font-size:6.5px;padding:0 3px;bottom:-7px}
@@ -2391,7 +2371,6 @@
         actions: [],
         lastActionText: '',
         lastActionKind: '',
-        lastActionAt: 0,
         isHero: i === S.heroSeat
       });
     }
@@ -2441,7 +2420,6 @@
       s.actions = [];
       s.lastActionText = '';
       s.lastActionKind = '';
-      s.lastActionAt = 0;
       if (!s.eliminated){
         s.cards = [S.deck.pop(), S.deck.pop()];
       }
@@ -2777,13 +2755,6 @@
   function markAction(seat, label, kind){
     seat.lastActionText = label;
     seat.lastActionKind = kind;
-    seat.lastActionAt = Date.now();
-
-    if (seat._actionTimer) clearTimeout(seat._actionTimer);
-    const token = S.token;
-    seat._actionTimer = setTimeout(function(){
-      if (token === S.token) render();
-    }, 2100);
   }
 
   function actFold(idx){
@@ -3105,15 +3076,6 @@
       plate.appendChild(posWrap);
       plate.appendChild(stack);
       el.appendChild(plate);
-
-      // 2초 말풍선 (최근 액션)
-      if (seat.lastActionAt && seat.lastActionText &&
-          (Date.now() - seat.lastActionAt) < 2000){
-        const bubble = document.createElement('span');
-        bubble.className = 'actionBubble show ' + (seat.lastActionKind || '');
-        bubble.textContent = seat.lastActionText;
-        el.appendChild(bubble);
-      }
 
       // 버튼(D) 표시 — 매 핸드 시계방향으로 이동
       if (seat.isButton){
